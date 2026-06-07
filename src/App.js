@@ -66,9 +66,10 @@ const rangeOf = (p,cu) => {
 
 // ─── Claude API ────────────────────────────────────────────────────────────────
 async function aiScan(b64,mime,type) {
+  const apiKey = process.env.REACT_APP_ANTHROPIC_KEY || "";
   const catList=type==="corp"?"meals|vehicle|equipment|phone_biz|home_office|marketing|professional|office_sup|other_biz":"grocery|gas|food_out|car|phone|house|other";
   const catGuide=type==="corp"?"meals=restaurant/food with client, vehicle=gas/parking/uber, equipment=electronics/software, phone_biz=phone/internet, home_office=rent/utilities portion, marketing=ads/printing, professional=lawyer/accountant, office_sup=supplies, other_biz=anything else":"grocery=supermarket, gas=fuel/petro/shell, food_out=restaurant/cafe/takeout/movies, car=lease/insurance/mechanic, phone=rogers/bell/telus, house=rent/hydro/utilities, other=everything else";
-  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:500,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mime,data:b64}},{type:"text",text:`Parse this receipt. Return ONLY valid JSON:\n{"merchant":"name","amount":23.45,"hst":2.71,"date":"YYYY-MM-DD","category":"${catList}","confidence":85${type!=="corp"?',"taxTag":"medical|donations|childcare|none"':''}}\n${catGuide}.`}]}]})});
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:500,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mime,data:b64}},{type:"text",text:`Parse this receipt. Return ONLY valid JSON:\n{"merchant":"name","amount":23.45,"hst":2.71,"date":"YYYY-MM-DD","category":"${catList}","confidence":85${type!=="corp"?',"taxTag":"medical|donations|childcare|none"':''}}\n${catGuide}.`}]}]})});
   const d=await res.json(),txt=d.content?.find(b=>b.type==="text")?.text||"{}";
   return JSON.parse(txt.replace(/```json|```/g,"").trim());
 }
@@ -331,6 +332,146 @@ function UpgradeModal({ reason, isGuest, onClose, onSignUp, onUpgrade }) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// CAMERA SCANNER — fullscreen live viewfinder
+// ══════════════════════════════════════════════════════════════════════════════
+function CameraScanner({ onCapture, onClose }) {
+  const videoRef  = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const [ready,    setReady]   = useState(false);
+  const [captured, setCaptured]= useState(null);
+  const [flash,    setFlash]   = useState(false);
+  const [err,      setErr]     = useState(null);
+
+  useEffect(() => { startCam(); return () => stopCam(); }, []);
+
+  const startCam = async () => {
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode:"environment", width:{ideal:1920}, height:{ideal:1080} }
+      });
+      streamRef.current = s;
+      if (videoRef.current) videoRef.current.srcObject = s;
+    } catch(e) {
+      setErr("Camera access denied — please allow camera in browser settings and reload.");
+    }
+  };
+
+  const stopCam = () => {
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+  };
+
+  const capture = () => {
+    const v=videoRef.current, c=canvasRef.current;
+    if(!v||!c) return;
+    c.width=v.videoWidth||1280; c.height=v.videoHeight||720;
+    c.getContext("2d").drawImage(v,0,0);
+    setFlash(true); setTimeout(()=>setFlash(false),200);
+    stopCam();
+    setCaptured(c.toDataURL("image/jpeg",.92));
+  };
+
+  const retake = () => { setCaptured(null); startCam(); setReady(false); };
+
+  const corners = [
+    {top:0,left:0,borderTop:"3px solid #fff",borderLeft:"3px solid #fff",borderRadius:"14px 0 0 0"},
+    {top:0,right:0,borderTop:"3px solid #fff",borderRight:"3px solid #fff",borderRadius:"0 14px 0 0"},
+    {bottom:0,left:0,borderBottom:"3px solid #fff",borderLeft:"3px solid #fff",borderRadius:"0 0 0 14px"},
+    {bottom:0,right:0,borderBottom:"3px solid #fff",borderRight:"3px solid #fff",borderRadius:"0 0 14px 0"},
+  ];
+
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:500,background:"#000",fontFamily:"'Plus Jakarta Sans',system-ui,sans-serif"}}>
+      <canvas ref={canvasRef} style={{display:"none"}}/>
+
+      {/* Flash effect */}
+      {flash && <div style={{position:"absolute",inset:0,background:"#fff",opacity:.8,zIndex:10,pointerEvents:"none"}}/>}
+
+      {!captured ? (
+        <>
+          <video ref={videoRef} autoPlay playsInline muted onCanPlay={()=>setReady(true)}
+            style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+
+          {err ? (
+            <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,background:"rgba(0,0,0,.8)"}}>
+              <div style={{fontSize:48,marginBottom:16}}>📷</div>
+              <div style={{color:"#fff",fontSize:14,textAlign:"center",lineHeight:1.7,marginBottom:28}}>{err}</div>
+              <button onClick={onClose} style={{padding:"12px 28px",borderRadius:14,background:"#fff",border:"none",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>← Go Back</button>
+            </div>
+          ) : (
+            <>
+              {/* Dark overlay with document cutout */}
+              <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
+                <div style={{width:"88%",aspectRatio:"1.5/1",borderRadius:16,boxShadow:"0 0 0 9999px rgba(0,0,0,.52)",position:"relative"}}>
+                  {/* Corner markers */}
+                  {corners.map((s,i)=>(
+                    <div key={i} style={{position:"absolute",width:28,height:28,...s}}/>
+                  ))}
+                  {/* Center scan line animation */}
+                  {ready && (
+                    <div style={{position:"absolute",top:"50%",left:8,right:8,height:2,background:"linear-gradient(90deg,transparent,rgba(232,77,14,.8),transparent)",animation:"scanLine 2s ease-in-out infinite"}}/>
+                  )}
+                </div>
+              </div>
+
+              {/* Hint */}
+              <div style={{position:"absolute",top:"calc(50% - 30vw - 40px)",left:0,right:0,textAlign:"center"}}>
+                <div style={{display:"inline-block",background:"rgba(0,0,0,.55)",backdropFilter:"blur(8px)",color:"#fff",fontSize:12,fontWeight:600,padding:"7px 18px",borderRadius:100,letterSpacing:".02em"}}>
+                  {ready ? "Align receipt · tap 📷 to capture" : "Starting camera…"}
+                </div>
+              </div>
+
+              {/* Bottom bar */}
+              <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"20px 32px 52px",display:"flex",alignItems:"center",justifyContent:"space-between",background:"linear-gradient(transparent,rgba(0,0,0,.65))"}}>
+                <button onClick={onClose} style={{color:"rgba(255,255,255,.85)",background:"none",border:"none",fontSize:15,fontWeight:700,cursor:"pointer",padding:12,fontFamily:"inherit"}}>
+                  Cancel
+                </button>
+                {/* Capture button */}
+                <button onClick={capture} disabled={!ready} style={{
+                  width:76,height:76,borderRadius:"50%",
+                  background:ready?"#fff":"rgba(255,255,255,.35)",
+                  border:"5px solid rgba(255,255,255,.4)",
+                  cursor:ready?"pointer":"not-allowed",
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                  fontSize:30,boxShadow:ready?"0 6px 24px rgba(0,0,0,.5)":"none",
+                  transition:"all .2s",fontFamily:"inherit"
+                }}>
+                  {ready ? "⬤" : "…"}
+                </button>
+                <div style={{width:70}}/>
+              </div>
+
+              {/* Top close */}
+              <button onClick={onClose} style={{position:"absolute",top:16,right:16,width:36,height:36,borderRadius:"50%",background:"rgba(0,0,0,.4)",border:"none",color:"#fff",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"inherit"}}>✕</button>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Preview */}
+          <img src={captured} alt="" style={{width:"100%",height:"100%",objectFit:"contain",background:"#111"}}/>
+          <div style={{position:"absolute",top:16,left:0,right:0,textAlign:"center"}}>
+            <div style={{display:"inline-block",background:"rgba(0,0,0,.6)",color:"#fff",fontSize:12,fontWeight:600,padding:"6px 16px",borderRadius:100}}>
+              Check the photo is clear
+            </div>
+          </div>
+          <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"20px 24px 52px",background:"linear-gradient(transparent,rgba(0,0,0,.75))",display:"flex",gap:12}}>
+            <button onClick={retake} style={{flex:1,padding:"16px",borderRadius:16,background:"rgba(255,255,255,.15)",color:"#fff",border:"1.5px solid rgba(255,255,255,.25)",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",backdropFilter:"blur(8px)"}}>
+              🔄 Retake
+            </button>
+            <button onClick={()=>onCapture(captured,"image/jpeg")} style={{flex:2,padding:"16px",borderRadius:16,background:"linear-gradient(135deg,#E84D0E,#F97316)",color:"#fff",border:"none",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"inherit",boxShadow:"0 4px 20px rgba(232,77,14,.45)"}}>
+              ✓ Use Photo
+            </button>
+          </div>
+        </>
+      )}
+      <style>{`@keyframes scanLine{0%,100%{opacity:0;transform:translateY(-20px)}50%{opacity:1;transform:translateY(20px)}}`}</style>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // MAIN APP
 // ══════════════════════════════════════════════════════════════════════════════
 function MainApp({ user, onSignOut, onGoAuth }) {
@@ -352,6 +493,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   const [cust,    setCust]  = useState({s:"",e:""});
   const [taxView, setTaxV]  = useState("personal");
   const [repView, setRepV]  = useState("personal");
+  const [showCamera,setCamera] = useState(false);
   const [typeModal,setTypeM]= useState(false);
   const [pendFile,setPendF] = useState(null);
   const [upgrade, setUpgrade]=useState(null);
@@ -378,6 +520,13 @@ function MainApp({ user, onSignOut, onGoAuth }) {
     const reader=new FileReader();
     reader.onload=(e)=>{ const url=e.target.result; setPrev(url); setPendF({b64:url.split(",")[1],mime:file.type}); setTypeM(true); };
     reader.readAsDataURL(file);
+  };
+
+  const onCameraCapture = (dataUrl, mime) => {
+    setCamera(false);
+    setPrev(dataUrl);
+    setPendF({b64: dataUrl.split(",")[1], mime});
+    setTypeM(true);
   };
 
   const onTypeChosen = async (type) => {
@@ -461,6 +610,9 @@ function MainApp({ user, onSignOut, onGoAuth }) {
           </div>
         </>
       )}
+
+      {/* ── CAMERA SCANNER ──────────────────────────────────────── */}
+      {showCamera && <CameraScanner onCapture={onCameraCapture} onClose={()=>setCamera(false)}/>}
 
       {/* ── OVERLAYS ─────────────────────────────────────────────── */}
       {scanning&&(
@@ -622,10 +774,10 @@ function MainApp({ user, onSignOut, onGoAuth }) {
             <div style={{fontSize:11,fontWeight:800,color:"#aaa",letterSpacing:".08em",marginBottom:12}}>RECENT</div>
             {!ready&&<div style={{textAlign:"center",padding:40,color:"#ccc",fontSize:13}}>Loading…</div>}
             {ready&&txns.length===0&&(
-              <div style={{textAlign:"center",padding:"24px 0 16px"}}>
-                <div style={{fontSize:44,marginBottom:12}}>🧾</div>
-                <div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,marginBottom:6}}>No expenses yet</div>
-                <div style={{fontSize:13,color:"#aaa"}}>Add your first expense below</div>
+              <div style={{textAlign:"center",padding:"20px 0 16px"}}>
+                <div style={{fontSize:36,marginBottom:10}}>🧾</div>
+                <div style={{fontFamily:"'Syne',sans-serif",fontSize:17,fontWeight:800,marginBottom:4}}>No expenses yet</div>
+                <div style={{fontSize:12,color:"#aaa"}}>Add your first expense below</div>
               </div>
             )}
             {groups.map(([label,dayTxns])=>(
@@ -655,28 +807,35 @@ function MainApp({ user, onSignOut, onGoAuth }) {
 
             {/* Action buttons */}
             <div style={{margin:"8px 0 18px",display:"flex",flexDirection:"column",gap:10}}>
-              <label style={{display:"block",cursor:"pointer"}}>
-                <input type="file" accept="image/*,application/pdf" style={{display:"none"}} onChange={e=>{if(e.target.files[0])onFile(e.target.files[0]);e.target.value="";}}/>
-                <div style={{width:"100%",padding:"19px",borderRadius:18,background:"linear-gradient(135deg,#E84D0E,#F97316)",color:"#fff",fontSize:16,fontWeight:800,fontFamily:"'Syne',sans-serif",boxShadow:"0 8px 22px rgba(232,77,14,.3)",display:"flex",alignItems:"center",justifyContent:"center",gap:12,userSelect:"none"}}>
-                  <span style={{fontSize:24}}>📷</span>Scan Receipt or Bill
-                </div>
-              </label>
-              <button className="btn" onClick={()=>setManual({type:"personal",merchant:"",amount:"",hst:"",date:new Date().toISOString().slice(0,10),category:"grocery",taxTag:"none"})} style={{width:"100%",padding:"14px",borderRadius:14,background:"#fff",border:"1.5px solid #E5E4E0",color:"#555",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:8,boxShadow:"0 2px 8px rgba(0,0,0,.05)"}}>
-                <span style={{fontSize:17}}>✏️</span>Add Manually
+              {/* Primary: open live camera */}
+              <button className="btn" onClick={()=>setCamera(true)} style={{width:"100%",padding:"18px",borderRadius:18,background:"linear-gradient(135deg,#E84D0E,#F97316)",color:"#fff",fontSize:15,fontWeight:800,fontFamily:"'Syne',sans-serif",boxShadow:"0 8px 22px rgba(232,77,14,.3)",display:"flex",alignItems:"center",justifyContent:"center",gap:10,userSelect:"none"}}>
+                <span style={{fontSize:20}}>📷</span>Scan Receipt or Bill
               </button>
+              {/* Secondary row: gallery + manual */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <label style={{cursor:"pointer"}}>
+                  <input type="file" accept="image/*,application/pdf" style={{display:"none"}} onChange={e=>{if(e.target.files[0])onFile(e.target.files[0]);e.target.value="";}}/>
+                  <div style={{padding:"12px",borderRadius:14,background:"#fff",border:"1.5px solid #E5E4E0",color:"#555",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:7,boxShadow:"0 2px 8px rgba(0,0,0,.05)",userSelect:"none"}}>
+                    <span style={{fontSize:15}}>🖼️</span>From Gallery
+                  </div>
+                </label>
+                <button className="btn" onClick={()=>setManual({type:"personal",merchant:"",amount:"",hst:"",date:new Date().toISOString().slice(0,10),category:"grocery",taxTag:"none"})} style={{padding:"12px",borderRadius:14,background:"#fff",border:"1.5px solid #E5E4E0",color:"#555",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:7,boxShadow:"0 2px 8px rgba(0,0,0,.05)"}}>
+                  <span style={{fontSize:15}}>✏️</span>Manual Entry
+                </button>
+              </div>
             </div>
 
             {/* Weekly card */}
             <div style={{background:"#111",color:"#fff",borderRadius:22,padding:"20px 22px",marginBottom:20,boxShadow:"0 4px 20px rgba(0,0,0,.14)"}}>
               <div style={{fontSize:10,color:"#555",fontWeight:800,letterSpacing:".09em",marginBottom:12}}>THIS WEEK</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:12}}>
-                <div><div style={{fontSize:10,color:"#555",marginBottom:3}}>👤 PERSONAL</div><div style={{fontFamily:"'Syne',sans-serif",fontSize:24,fontWeight:800,color:"#F97316"}}>{fmt(weekP)}</div></div>
-                <div><div style={{fontSize:10,color:"#555",marginBottom:3}}>💼 CORP{!hasCorp&&<span style={{fontSize:8,color:"#E84D0E",marginLeft:4}}>PRO</span>}</div><div style={{fontFamily:"'Syne',sans-serif",fontSize:24,fontWeight:800,color:hasCorp?"#818CF8":"#2A2A2A"}}>{hasCorp?fmt(weekC):"—"}</div></div>
+                <div><div style={{fontSize:10,color:"#555",marginBottom:3}}>👤 PERSONAL</div><div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#F97316"}}>{fmt(weekP)}</div></div>
+                <div><div style={{fontSize:10,color:"#555",marginBottom:3}}>💼 CORP{!hasCorp&&<span style={{fontSize:8,color:"#E84D0E",marginLeft:4}}>PRO</span>}</div><div style={{fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:hasCorp?"#818CF8":"#2A2A2A"}}>{hasCorp?fmt(weekC):"—"}</div></div>
               </div>
               <div style={{height:"1px",background:"rgba(255,255,255,.06)",marginBottom:12}}/>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <span style={{fontSize:12,color:"#555"}}>Combined total</span>
-                <span style={{fontSize:15,fontWeight:800}}>{fmt(weekP+(hasCorp?weekC:0))}</span>
+                <span style={{fontSize:14,fontWeight:800}}>{fmt(weekP+(hasCorp?weekC:0))}</span>
               </div>
             </div>
           </div>
