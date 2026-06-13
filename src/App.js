@@ -81,8 +81,11 @@ async function aiScan(b64,mime,type) {
   const catList=type==="corp"?"meals|vehicle|equipment|phone_biz|home_office|marketing|professional|office_sup|other_biz":"grocery|gas|food_out|car|phone|house|other";
   const catGuide=type==="corp"?"meals=restaurant/food with client, vehicle=gas/parking/uber, equipment=electronics/software, phone_biz=phone/internet, home_office=rent/utilities portion, marketing=ads/printing, professional=lawyer/accountant, office_sup=supplies, other_biz=anything else":"grocery=supermarket, gas=fuel/petro/shell, food_out=restaurant/cafe/takeout/movies, car=lease/insurance/mechanic, phone=rogers/bell/telus, house=rent/hydro/utilities, other=everything else";
   const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:500,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mime,data:b64}},{type:"text",text:`Parse this receipt. Return ONLY valid JSON:\n{"merchant":"name","amount":23.45,"hst":2.71,"date":"YYYY-MM-DD","category":"${catList}","confidence":85${type!=="corp"?',"taxTag":"medical|donations|childcare|none"':''}}\n${catGuide}.`}]}]})});
-  const d=await res.json(),txt=d.content?.find(b=>b.type==="text")?.text||"{}";
-  return JSON.parse(txt.replace(/```json|```/g,"").trim());
+  const d=await res.json();
+  if(d.error) throw new Error(`API ${d.error.type}: ${d.error.message} (key:${apiKey?apiKey.slice(0,12)+"...":"MISSING"})`);
+  const txt=d.content?.find(b=>b.type==="text")?.text||"{}";
+  try { return JSON.parse(txt.replace(/```json|```/g,"").trim()); }
+  catch { throw new Error(`Parse failed: ${txt.slice(0,150)}`); }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -655,7 +658,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)",animation:"fadeIn .2s"}} onClick={()=>{setPend(null);setPrev(null);}}/>
           <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#F5F4F0",borderRadius:"24px 24px 0 0",padding:"28px 20px 44px",maxHeight:"86vh",overflowY:"auto",animation:"sheet .25s ease"}}>
             <div style={{display:"inline-flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:100,marginBottom:14,background:pending.type==="corp"?"#EEF2FF":"#FFF3EE",fontSize:12,fontWeight:700,color:pending.type==="corp"?"#4338CA":"#B94A1A"}}>{pending.type==="corp"?"💼 Corporation":"👤 Personal"}</div>
-            {pending.err&&<div style={{background:"#FFF3EE",border:"1.5px solid #FFD5C2",borderRadius:10,padding:"10px 12px",marginBottom:12,fontSize:12,color:"#B94A1A"}}>⚠️ Couldn't read clearly — pick category manually.</div>}
+            {pending.err&&<div style={{background:"#FFF3EE",border:"1.5px solid #FFD5C2",borderRadius:10,padding:"10px 12px",marginBottom:12,fontSize:11,color:"#B94A1A",wordBreak:"break-all"}}>⚠️ Debug: {pending.err}</div>}
             <div style={{fontSize:17,fontWeight:600,marginBottom:4}}>What was this for?</div>
             <div style={{fontSize:13,color:"#888",marginBottom:20}}>{pending.data?.merchant?`${pending.data.merchant}${pending.data.amount?` · ${fmt(pending.data.amount)}`:""}`:"Pick a category"}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
