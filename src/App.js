@@ -542,7 +542,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
     if(type==="corp"&&!hasCorp){ setTypeM(false); setPrev(null); setPendF(null); setUpgrade("corp"); return; }
     setTypeM(false); setScan(true);
     try {
-      const r=await aiScan(pendF.b64,pendF.mime,type);
+      const r=await aiScan(pendFile.b64,pendFile.mime,type);
       if((r.confidence||0)>=CONF){ await addTxn({merchant:r.merchant||"Receipt",amount:r.amount,hst:r.hst,date:r.date||new Date().toISOString().slice(0,10),category:r.category||(type==="corp"?"other_biz":"other"),taxTag:r.taxTag||"none",type}); setPrev(null); }
       else { setPend({data:r,sugCat:r.category||(type==="corp"?"other_biz":"other"),type}); }
     } catch(err) { setPend({data:{merchant:"",amount:null},sugCat:type==="corp"?"other_biz":"other",type,err:String(err)}); }
