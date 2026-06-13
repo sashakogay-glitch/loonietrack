@@ -389,8 +389,22 @@ function CameraScanner({ onCapture, onClose }) {
   const doCapture = () => {
     clearInterval(countRef.current);
     const v=videoRef.current, c=canvasRef.current; if(!v||!c) return;
-    c.width=v.videoWidth||1280; c.height=v.videoHeight||720;
-    c.getContext("2d").drawImage(v,0,0);
+    const vw=v.videoWidth||1280, vh=v.videoHeight||720;
+    const sw=window.innerWidth, sh=window.innerHeight;
+    // object-fit:cover scale + offset of video within screen
+    const scale = Math.max(sw/vw, sh/vh);
+    const dispW = vw*scale, dispH = vh*scale;
+    const offX = (dispW - sw)/2, offY = (dispH - sh)/2;
+    // guide frame on screen: 78% width, aspect ratio 1/1.7, centered
+    const frameW = sw*0.78, frameH = frameW*1.7;
+    const frameLeft = (sw - frameW)/2, frameTop = (sh - frameH)/2;
+    // map to video pixel coords
+    const cropX = Math.max(0,(frameLeft + offX)/scale);
+    const cropY = Math.max(0,(frameTop + offY)/scale);
+    const cropW = Math.min(vw-cropX, frameW/scale);
+    const cropH = Math.min(vh-cropY, frameH/scale);
+    c.width=cropW; c.height=cropH;
+    c.getContext("2d").drawImage(v, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
     setFlash(true); setTimeout(()=>setFlash(false),180);
     stopCam(); setCountdown(null);
     setCaptured(c.toDataURL("image/jpeg",.92));
@@ -498,6 +512,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   const [undo,    setUndo]  = useState(null);
   const [manual,  setManual]= useState(null);
   const [drill,   setDrill] = useState(null);
+  const [viewImg, setViewImg] = useState(null);
   const [period,  setPer]   = useState("month");
   const [cust,    setCust]  = useState({s:"",e:""});
   const [taxView, setTaxV]  = useState("personal");
@@ -541,17 +556,18 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   const onTypeChosen = async (type) => {
     if(type==="corp"&&!hasCorp){ setTypeM(false); setPrev(null); setPendF(null); setUpgrade("corp"); return; }
     setTypeM(false); setScan(true);
+    const img = prev;
     try {
       const r=await aiScan(pendFile.b64,pendFile.mime,type);
-      if((r.confidence||0)>=CONF){ await addTxn({merchant:r.merchant||"Receipt",amount:r.amount,hst:r.hst,date:r.date||new Date().toISOString().slice(0,10),category:r.category||(type==="corp"?"other_biz":"other"),taxTag:r.taxTag||"none",type}); setPrev(null); }
-      else { setPend({data:r,sugCat:r.category||(type==="corp"?"other_biz":"other"),type}); }
-    } catch(err) { setPend({data:{merchant:"",amount:null},sugCat:type==="corp"?"other_biz":"other",type,err:String(err)}); }
+      if((r.confidence||0)>=CONF){ await addTxn({merchant:r.merchant||"Receipt",amount:r.amount,hst:r.hst,date:r.date||new Date().toISOString().slice(0,10),category:r.category||(type==="corp"?"other_biz":"other"),taxTag:r.taxTag||"none",type,img}); setPrev(null); }
+      else { setPend({data:r,sugCat:r.category||(type==="corp"?"other_biz":"other"),type,img}); }
+    } catch(err) { setPend({data:{merchant:"",amount:null},sugCat:type==="corp"?"other_biz":"other",type,err:String(err),img}); }
     finally { setScan(false); setPendF(null); }
   };
 
   const confirm = async (catId) => {
-    const {data,type}=pending; setPend(null); setPrev(null);
-    await addTxn({merchant:data?.merchant||"Expense",amount:data?.amount,hst:data?.hst,date:data?.date||new Date().toISOString().slice(0,10),category:catId,taxTag:data?.taxTag||"none",type});
+    const {data,type,img}=pending; setPend(null); setPrev(null);
+    await addTxn({merchant:data?.merchant||"Expense",amount:data?.amount,hst:data?.hst,date:data?.date||new Date().toISOString().slice(0,10),category:catId,taxTag:data?.taxTag||"none",type,img});
   };
 
   // ── Derived ─────────────────────────────────────────────────────────────────
@@ -622,6 +638,15 @@ function MainApp({ user, onSignOut, onGoAuth }) {
 
       {/* ── CAMERA SCANNER ──────────────────────────────────────── */}
       {showCamera && <CameraScanner onCapture={onCameraCapture} onClose={()=>setCamera(false)}/>}
+
+      {/* ── RECEIPT IMAGE VIEWER ──────────────────────────────────── */}
+      {viewImg&&(
+        <div style={{position:"fixed",inset:0,zIndex:600,background:"#000",display:"flex",alignItems:"center",justifyContent:"center",animation:"fadeIn .15s"}} onClick={()=>setViewImg(null)}>
+          <img src={viewImg} alt="Receipt" style={{maxWidth:"94%",maxHeight:"88%",objectFit:"contain",borderRadius:8,boxShadow:"0 8px 40px rgba(0,0,0,.5)"}}/>
+          <button onClick={()=>setViewImg(null)} style={{position:"absolute",top:18,right:18,width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,.15)",border:"none",color:"#fff",fontSize:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+          <div style={{position:"absolute",bottom:28,left:0,right:0,textAlign:"center",color:"rgba(255,255,255,.6)",fontSize:12,fontWeight:600}}>Tap anywhere to close</div>
+        </div>
+      )}
 
       {/* ── OVERLAYS ─────────────────────────────────────────────── */}
       {scanning&&(
@@ -740,10 +765,11 @@ function MainApp({ user, onSignOut, onGoAuth }) {
               <div style={{overflowY:"auto",flex:1,padding:"10px 20px 32px"}}>
                 {items.length===0&&<div style={{textAlign:"center",padding:"36px 0",color:"#aaa",fontSize:13}}>No transactions this period</div>}
                 {items.map((t,i)=>(
-                  <div key={t.id} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 0",borderBottom:i<items.length-1?"1px solid #F0EFEC":"none"}}>
+                  <div key={t.id} onClick={()=>t.img&&setViewImg(t.img)} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 0",borderBottom:i<items.length-1?"1px solid #F0EFEC":"none",cursor:t.img?"pointer":"default"}}>
+                    {t.img&&<img src={t.img} alt="" style={{width:36,height:36,borderRadius:10,objectFit:"cover",flexShrink:0,border:"1px solid #F0EFEC"}}/>}
                     <div style={{flex:1}}><div style={{fontSize:14,fontWeight:600}}>{t.merchant||c.label}</div><div style={{fontSize:12,color:"#aaa",marginTop:1}}>{fmtD(t.date||t.at)}</div></div>
                     <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:600}}>{fmt(t.amount)}</div>{t.hst>0&&<div style={{fontSize:11,color:"#aaa",marginTop:1}}>HST {fmt(t.hst)}</div>}</div>
-                    <button className="btn" onClick={async()=>{await del(t.id);setDrill(d=>({...d}));}} style={{background:"none",color:"#ddd",fontSize:18,padding:"2px 6px"}}>×</button>
+                    <button className="btn" onClick={async(e)=>{e.stopPropagation();await del(t.id);setDrill(d=>({...d}));}} style={{background:"none",color:"#ddd",fontSize:18,padding:"2px 6px"}}>×</button>
                   </div>
                 ))}
               </div>
@@ -794,8 +820,10 @@ function MainApp({ user, onSignOut, onGoAuth }) {
                 <div style={{fontSize:11,fontWeight:700,color:"#bbb",letterSpacing:".06em",marginBottom:7}}>{label}</div>
                 <div style={{background:"#fff",borderRadius:18,overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
                   {dayTxns.map((t,i)=>{const c=anyCat(t.category,t.type);const isCorp=t.type==="corp";return(
-                    <div key={t.id} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 14px",borderBottom:i<dayTxns.length-1?"1px solid #F3F3F1":"none"}}>
-                      <div style={{width:42,height:42,borderRadius:13,background:`${c.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{c.icon}</div>
+                    <div key={t.id} onClick={()=>t.img&&setViewImg(t.img)} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 14px",borderBottom:i<dayTxns.length-1?"1px solid #F3F3F1":"none",cursor:t.img?"pointer":"default"}}>
+                      {t.img
+                        ? <img src={t.img} alt="" style={{width:42,height:42,borderRadius:13,objectFit:"cover",flexShrink:0,border:"1px solid #F0EFEC"}}/>
+                        : <div style={{width:42,height:42,borderRadius:13,background:`${c.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{c.icon}</div>}
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
                           <div style={{fontSize:14,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.merchant||c.label}</div>
@@ -807,7 +835,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
                         <div style={{fontSize:14,fontWeight:600}}>{fmt(t.amount)}</div>
                         {t.hst>0&&<div style={{fontSize:10,color:isCorp?"#4338CA":"#bbb",marginTop:1}}>HST {fmt(t.hst)}</div>}
                       </div>
-                      <button className="btn" onClick={()=>del(t.id)} style={{background:"none",color:"#ddd",fontSize:18,padding:"2px 4px"}}>×</button>
+                      <button className="btn" onClick={(e)=>{e.stopPropagation();del(t.id);}} style={{background:"none",color:"#ddd",fontSize:18,padding:"2px 4px"}}>×</button>
                     </div>
                   );})}
                 </div>
