@@ -80,7 +80,7 @@ async function aiScan(b64,mime,type) {
   const apiKey = process.env.REACT_APP_ANTHROPIC_KEY || "";
   const catList=type==="corp"?"meals|vehicle|equipment|phone_biz|home_office|marketing|professional|office_sup|other_biz":"grocery|gas|food_out|car|phone|house|other";
   const catGuide=type==="corp"?"meals=restaurant/food with client, vehicle=gas/parking/uber, equipment=electronics/software, phone_biz=phone/internet, home_office=rent/utilities portion, marketing=ads/printing, professional=lawyer/accountant, office_sup=supplies, other_biz=anything else":"grocery=supermarket, gas=fuel/petro/shell, food_out=restaurant/cafe/takeout/movies, car=lease/insurance/mechanic, phone=rogers/bell/telus, house=rent/hydro/utilities, other=everything else";
-  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:500,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mime,data:b64}},{type:"text",text:`Parse this receipt. Return ONLY valid JSON:\n{"merchant":"name","amount":23.45,"hst":2.71,"date":"YYYY-MM-DD","category":"${catList}","confidence":85${type!=="corp"?',"taxTag":"medical|donations|childcare|none"':''}}\n${catGuide}.`}]}]})});
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:500,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mime,data:b64}},{type:"text",text:`Parse this receipt. Return ONLY valid JSON:\n{"merchant":"name","amount":23.45,"hst":2.71,"date":"YYYY-MM-DD","category":"${catList}","confidence":85${type!=="corp"?',"taxTag":"medical|donations|childcare|none"':''}}\n${catGuide}.`}]}]})});
   const d=await res.json();
   if(d.error) throw new Error(`API ${d.error.type}: ${d.error.message} (key:${apiKey?apiKey.slice(0,12)+"...":"MISSING"})`);
   const txt=d.content?.find(b=>b.type==="text")?.text||"{}";
@@ -424,14 +424,14 @@ function CameraScanner({ onCapture, onClose }) {
           ) : (
             <>
               <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
-                <div style={{width:"88%",aspectRatio:"1.55/1",borderRadius:14,boxShadow:"0 0 0 9999px rgba(0,0,0,.5)",position:"relative"}}>
+                <div style={{width:"78%",aspectRatio:"1/1.7",borderRadius:14,boxShadow:"0 0 0 9999px rgba(0,0,0,.5)",position:"relative"}}>
                   {corners.map((s,i)=><div key={i} style={{position:"absolute",width:26,height:26,...s}}/>)}
                   {ready && countdown!==null && (
                     <div style={{position:"absolute",top:"50%",left:10,right:10,height:"2px",background:"linear-gradient(90deg,transparent,rgba(232,77,14,.9),transparent)",animation:"scanLine 1.5s ease-in-out infinite"}}/>
                   )}
                 </div>
               </div>
-              <div style={{position:"absolute",top:"18%",left:0,right:0,textAlign:"center"}}>
+              <div style={{position:"absolute",top:"8%",left:0,right:0,textAlign:"center"}}>
                 <div style={{display:"inline-block",background:"rgba(0,0,0,.6)",backdropFilter:"blur(8px)",color:"#fff",fontSize:12,fontWeight:600,padding:"7px 18px",borderRadius:100}}>
                   {!ready ? "Starting camera…" : countdown!==null ? `Auto-capture in ${countdown}s — tap to stop` : "Tap 📷 to capture"}
                 </div>
