@@ -78,46 +78,45 @@ const rangeOf = (p,cu) => {
 // ─── Claude API ────────────────────────────────────────────────────────────────
 async function aiScan(b64,mime,type) {
   const apiKey = process.env.REACT_APP_ANTHROPIC_KEY || "";
-  if(!apiKey) throw new Error("NO API KEY in build");
+  if(!apiKey) throw new Error("NO API KEY");
   const catList = type==="corp"
     ? "meals|vehicle|equipment|phone_biz|home_office|marketing|professional|office_sup|other_biz"
     : "grocery|gas|food_out|car|phone|house|other";
   const taxTag = type!=="corp" ? ',"taxTag":"medical|donations|childcare|none"' : "";
-  const controller = new AbortController();
-  const timer = setTimeout(()=>controller.abort(), 30000);
-  let res;
-  try {
-    res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true"
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 500,
-        messages: [{
-          role: "user",
-          content: [
-            {type:"image", source:{type:"base64", media_type:mime, data:b64}},
-            {type:"text", text:`Parse receipt. Return ONLY JSON: {"merchant":"name","amount":0.00,"hst":0.00,"date":"YYYY-MM-DD","category":"${catList}","confidence":85${taxTag}}`}
-          ]
-        }]
-      })
-    });
-  } catch(e) {
-    clearTimeout(timer);
-    throw new Error(e.name==="AbortError" ? "Timeout 30s — no response" : `Network: ${e.message}`);
-  }
-  clearTimeout(timer);
+
+  // Use Promise.race with manual timeout
+  const fetchPromise = fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 300,
+      messages: [{
+        role: "user",
+        content: [
+          {type:"image", source:{type:"base64", media_type:mime, data:b64}},
+          {type:"text", text:`Receipt JSON only: {"merchant":"?","amount":0.00,"hst":0.00,"date":"YYYY-MM-DD","category":"${catList}","confidence":80${taxTag}}`}
+        ]
+      }]
+    })
+  });
+
+  const timeoutPromise = new Promise((_,rej) =>
+    setTimeout(()=>rej(new Error("Timeout 20s")), 20000)
+  );
+
+  const res = await Promise.race([fetchPromise, timeoutPromise]);
   const d = await res.json();
   if(d.error) throw new Error(`${d.error.type}: ${d.error.message}`);
   const txt = d.content?.find(b=>b.type==="text")?.text || "{}";
   return JSON.parse(txt.replace(/```json|```/g,"").trim());
 }
+
 
 
 // ══════════════════════════════════════════════════════════════════════════════
