@@ -77,44 +77,17 @@ const rangeOf = (p,cu) => {
 
 // ─── Claude API ────────────────────────────────────────────────────────────────
 async function aiScan(b64,mime,type) {
-  const apiKey = process.env.REACT_APP_ANTHROPIC_KEY || "";
-  if(!apiKey) throw new Error("NO API KEY");
-  const catList = type==="corp"
-    ? "meals|vehicle|equipment|phone_biz|home_office|marketing|professional|office_sup|other_biz"
-    : "grocery|gas|food_out|car|phone|house|other";
-  const taxTag = type!=="corp" ? ',"taxTag":"medical|donations|childcare|none"' : "";
-
-  // Use Promise.race with manual timeout
-  const fetchPromise = fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true"
-    },
-    body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 300,
-      messages: [{
-        role: "user",
-        content: [
-          {type:"image", source:{type:"base64", media_type:mime, data:b64}},
-          {type:"text", text:`Receipt JSON only: {"merchant":"?","amount":0.00,"hst":0.00,"date":"YYYY-MM-DD","category":"${catList}","confidence":80${taxTag}}`}
-        ]
-      }]
-    })
-  });
-
-  const timeoutPromise = new Promise((_,rej) =>
-    setTimeout(()=>rej(new Error("Timeout 20s")), 20000)
-  );
-
-  const res = await Promise.race([fetchPromise, timeoutPromise]);
-  const d = await res.json();
+  const apiKey = process.env.REACT_APP_ANTHROPIC_KEY||"";
+  const catList=type==="corp"?"meals|vehicle|equipment|phone_biz|home_office|marketing|professional|office_sup|other_biz":"grocery|gas|food_out|car|phone|house|other";
+  const catGuide=type==="corp"?"meals=restaurant/food,vehicle=gas/parking,equipment=electronics,phone_biz=phone/internet,home_office=rent/utilities,marketing=ads,professional=lawyer/accountant,office_sup=supplies,other_biz=other":"grocery=supermarket,gas=fuel/petro/shell,food_out=restaurant/cafe/takeout,car=lease/insurance/mechanic,phone=rogers/bell/telus,house=rent/hydro,other=everything else";
+  const taxTag=type!=="corp"?',"taxTag":"medical|donations|childcare|none"' :"";
+  const tp=new Promise((_,r)=>setTimeout(()=>r(new Error("Timeout")),25000));
+  const fp=fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:400,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mime,data:b64}},{type:"text",text:`Parse this receipt. Return ONLY valid JSON: {"merchant":"name","amount":0.00,"hst":0.00,"date":"YYYY-MM-DD","category":"${catList}","confidence":85${taxTag}}. Guide: ${catGuide}`}]}]})});
+  const res=await Promise.race([fp,tp]);
+  const d=await res.json();
   if(d.error) throw new Error(`${d.error.type}: ${d.error.message}`);
-  const txt = d.content?.find(b=>b.type==="text")?.text || "{}";
-  return JSON.parse(txt.replace(/```json|```/g,"").trim());
+  const txt=d.content?.find(b=>b.type==="text")?.text||"{}";
+  try{return JSON.parse(txt.replace(/```json|```/g,"").trim());}catch{throw new Error("Parse fail: "+txt.slice(0,80));}
 }
 
 
@@ -420,25 +393,11 @@ function CameraScanner({ onCapture, onClose }) {
   const doCapture = () => {
     clearInterval(countRef.current);
     const v=videoRef.current, c=canvasRef.current; if(!v||!c) return;
-    const vw=v.videoWidth||1280, vh=v.videoHeight||720;
-    const sw=window.innerWidth, sh=window.innerHeight;
-    // object-fit:cover scale + offset of video within screen
-    const scale = Math.max(sw/vw, sh/vh);
-    const dispW = vw*scale, dispH = vh*scale;
-    const offX = (dispW - sw)/2, offY = (dispH - sh)/2;
-    // guide frame on screen: 78% width, aspect ratio 1/1.7, centered
-    const frameW = sw*0.78, frameH = frameW*1.7;
-    const frameLeft = (sw - frameW)/2, frameTop = (sh - frameH)/2;
-    // map to video pixel coords
-    const cropX = Math.max(0,(frameLeft + offX)/scale);
-    const cropY = Math.max(0,(frameTop + offY)/scale);
-    const cropW = Math.min(vw-cropX, frameW/scale);
-    const cropH = Math.min(vh-cropY, frameH/scale);
-    c.width=cropW; c.height=cropH;
-    c.getContext("2d").drawImage(v, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+    c.width=v.videoWidth||1280; c.height=v.videoHeight||720;
+    c.getContext("2d").drawImage(v,0,0);
     setFlash(true); setTimeout(()=>setFlash(false),180);
     stopCam(); setCountdown(null);
-    setCaptured(c.toDataURL("image/jpeg",.4));
+    setCaptured(c.toDataURL("image/jpeg",.85));
   };
 
   const retake = () => { setCaptured(null); setReady(false); setCountdown(null); setAutoOff(false); startCam(); };
@@ -571,35 +530,20 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   const del    = async (id) => commit(txns.filter(t=>t.id!==id));
 
   // Resize image to max 1000px wide before sending — reduces payload 4-8x
-  const resizeImg = (dataUrl, maxW=1000) => new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(1, maxW / img.width);
-      const c = document.createElement("canvas");
-      c.width = Math.round(img.width * scale);
-      c.height = Math.round(img.height * scale);
-      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-      resolve(c.toDataURL("image/jpeg", 0.6));
-    };
-    img.src = dataUrl;
-  });
-
   const onFile = (file) => {
     if(!file) return;
     const reader=new FileReader();
-    reader.onload=async(e)=>{
+    reader.onload=(e)=>{
       const url=e.target.result;
-      const small = await resizeImg(url);
-      setPrev(small); setPendF({b64:small.split(",")[1],mime:"image/jpeg"}); setTypeM(true);
+      setPrev(url); setPendF({b64:url.split(",")[1],mime:file.type||"image/jpeg"}); setTypeM(true);
     };
     reader.readAsDataURL(file);
   };
 
-  const onCameraCapture = async (dataUrl, mime) => {
+  const onCameraCapture = (dataUrl, mime) => {
     setCamera(false);
-    const small = await resizeImg(dataUrl);
-    setPrev(small);
-    setPendF({b64: small.split(",")[1], mime:"image/jpeg"});
+    setPrev(dataUrl);
+    setPendF({b64: dataUrl.split(",")[1], mime: mime||"image/jpeg"});
     setTypeM(true);
   };
 
