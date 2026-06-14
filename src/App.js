@@ -76,56 +76,28 @@ const rangeOf = (p,cu) => {
 };
 
 // ─── Claude API ────────────────────────────────────────────────────────────────
-async function compressImage(dataUrl, maxW = 1200) {
-  return new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      const ratio = Math.min(1, maxW / img.width);
-      const c = document.createElement("canvas");
-      c.width = img.width * ratio;
-      c.height = img.height * ratio;
-      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-      solve(c.toDataURL("image/jpeg",0.75))
-    };
-    img.src = dataUrl;
-  });
+async function aiScan(b64,mime,type) {
+  const controller = new AbortController();
+  const timeout = setTimeout(()=>controller.abort(), 25000);
+  try {
+    const res = await fetch("/api/scan", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({b64, mime, type}),
+      signal: controller.signal
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(`API Error: ${data.error}`);
+    return data;
+  } catch(e) {
+    if(e.name==="AbortError") throw new Error("Timeout — чек не распознан, попробуй ещё раз");
+    throw e;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
-async function aiScan(b64,mime,type) {
-  const apiKey = process.env.REACT_APP_ANTHROPIC_KEY || "";
-  const catList=type==="corp"?"meals|vehicle|equipment|phone_biz|home_office|marketing|professional|office_sup|other_biz":"grocery|gas|food_out|car|phone|house|other";
-  const catGuide=type==="corp"?"meals=restaurant/food, vehicle=gas/parking/uber, equipment=electronics/software, phone_biz=phone/internet, home_office=rent/utilities, marketing=ads/printing, professional=lawyer/accountant, office_sup=supplies, other_biz=anything else":"grocery=supermarket, gas=fuel/petro/shell, food_out=restaurant/cafe/takeout, car=lease/insurance/mechanic, phone=rogers/bell/telus, house=rent/hydro/utilities, other=everything else";
-  const res=await fetch("https://api.anthropic.com/v1/messages",{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      "x-api-key":apiKey,
-      "anthropic-version":"2023-06-01",
-      "anthropic-dangerous-direct-browser-access":"true"
-    },
-    body:JSON.stringify({
-      model:"claude-sonnet-4-6",
-      max_tokens:500,
-      messages:[{role:"user",content:[
-        {type:"image",source:{type:"base64",media_type:mime,data:b64}},
-        {type:"text",text:`Parse receipt. Return ONLY JSON: {"merchant":"name","amount":0.00,"hst":0.00,"date":"YYYY-MM-DD","category":"${catList}","confidence":85${type!=="corp"?',"taxTag":"medical|donations|childcare|none"':''}}\n${catGuide}`}
-      ]}]
-    })
-  });
-  const d=await res.json();
-  if(d.error) throw new Error(d.error.message);
-  const txt=d.content?.find(b=>b.type==="text")?.text||"{}";
-  return JSON.parse(txt.replace(/```json|```/g,"").trim());
-}
-  const res = await fetch("/api/scan", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({b64, mime, type})
-  });
-  const data = await res.json();
-  if(data.error) throw new Error(`API Error: ${data.error}`);
-  return data;
- // ══════════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════
 // SHARED STYLES
 // ══════════════════════════════════════════════════════════════════════════════
 const SHARED_CSS = `
@@ -444,7 +416,7 @@ function CameraScanner({ onCapture, onClose }) {
     c.getContext("2d").drawImage(v, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
     setFlash(true); setTimeout(()=>setFlash(false),180);
     stopCam(); setCountdown(null);
-    setCaptured(c.toDataURL("image/jpeg",.35))
+    setCaptured(c.toDataURL("image/jpeg",.4));
   };
 
   const retake = () => { setCaptured(null); setReady(false); setCountdown(null); setAutoOff(false); startCam(); };
@@ -576,20 +548,38 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   const doUndo = async () => { if(!undo) return; await commit(txns.filter(t=>t.id!==undo.id)); setUndo(null); };
   const del    = async (id) => commit(txns.filter(t=>t.id!==id));
 
+  // Resize image to max 1000px wide before sending — reduces payload 4-8x
+  const resizeImg = (dataUrl, maxW=1000) => new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxW / img.width);
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL("image/jpeg", 0.6));
+    };
+    img.src = dataUrl;
+  });
+
   const onFile = (file) => {
     if(!file) return;
     const reader=new FileReader();
-    reader.onload=(e)=>{ const url=e.target.result; setPrev(url); setPendF({b64:url.split(",")[1],mime:file.type}); setTypeM(true); };
+    reader.onload=async(e)=>{
+      const url=e.target.result;
+      const small = await resizeImg(url);
+      setPrev(small); setPendF({b64:small.split(",")[1],mime:"image/jpeg"}); setTypeM(true);
+    };
     reader.readAsDataURL(file);
   };
 
   const onCameraCapture = async (dataUrl, mime) => {
-  setCamera(false);
-  const compressed = await compressImage(dataUrl);
-  setPrev(compressed);
-  setPendF({b64: compressed.split(",")[1], mime:"image/jpeg"});
-  setTypeM(true);
-};
+    setCamera(false);
+    const small = await resizeImg(dataUrl);
+    setPrev(small);
+    setPendF({b64: small.split(",")[1], mime:"image/jpeg"});
+    setTypeM(true);
+  };
 
   const onTypeChosen = async (type) => {
     if(type==="corp"&&!hasCorp){ setTypeM(false); setPrev(null); setPendF(null); setUpgrade("corp"); return; }
