@@ -109,7 +109,7 @@ async function aiScan(b64, mime, type) {
   const data = await res.json();
   if(data.error) throw new Error(`API Error: ${data.error}`);
   return data;
-}
+
 
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -570,7 +570,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
     reader.readAsDataURL(file);
   };
 
-  cconst onCameraCapture = async (dataUrl, mime) => {
+  const onCameraCapture = async (dataUrl, mime) => {
   setCamera(false);
   const compressed = await compressImage(dataUrl);
   setPrev(compressed);
