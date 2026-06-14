@@ -125,7 +125,6 @@ async function aiScan(b64,mime,type) {
   const data = await res.json();
   if(data.error) throw new Error(`API Error: ${data.error}`);
   return data;
-}
  // ══════════════════════════════════════════════════════════════════════════════
 // SHARED STYLES
 // ══════════════════════════════════════════════════════════════════════════════
