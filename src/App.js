@@ -77,38 +77,24 @@ const rangeOf = (p,cu) => {
 
 // ─── Claude API ────────────────────────────────────────────────────────────────
 async function aiScan(b64,mime,type) {
-  const apiKey = process.env.REACT_APP_ANTHROPIC_KEY || "";
-  const catList = type==="corp"
-    ? "meals|vehicle|equipment|phone_biz|home_office|marketing|professional|office_sup|other_biz"
-    : "grocery|gas|food_out|car|phone|house|other";
-  const catGuide = type==="corp"
-    ? "meals=restaurant/food, vehicle=gas/parking/uber, equipment=electronics/software, phone_biz=phone/internet, home_office=rent/utilities, marketing=ads/printing, professional=lawyer/accountant, office_sup=supplies, other_biz=anything else"
-    : "grocery=supermarket, gas=fuel/petro/shell, food_out=restaurant/cafe/takeout, car=lease/insurance/mechanic, phone=rogers/bell/telus, house=rent/hydro/utilities, other=everything else";
-  const taxTag = type!=="corp" ? ',"taxTag":"medical|donations|childcare|none"' : "";
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true"
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 500,
-      messages: [{
-        role: "user",
-        content: [
-          {type:"image", source:{type:"base64", media_type:mime, data:b64}},
-          {type:"text", text:`Parse receipt. Return ONLY JSON: {"merchant":"name","amount":0.00,"hst":0.00,"date":"YYYY-MM-DD","category":"${catList}","confidence":85${taxTag}}`}
-        ]
-      }]
-    })
-  });
-  const d = await res.json();
-  if(d.error) throw new Error(`${d.error.type}: ${d.error.message}`);
-  const txt = d.content?.find(b=>b.type==="text")?.text || "{}";
-  return JSON.parse(txt.replace(/```json|```/g,"").trim());
+  const controller = new AbortController();
+  const timeout = setTimeout(()=>controller.abort(), 25000);
+  try {
+    const res = await fetch("/api/scan", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({b64, mime, type}),
+      signal: controller.signal
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(`API Error: ${data.error}`);
+    return data;
+  } catch(e) {
+    if(e.name==="AbortError") throw new Error("Timeout — чек не распознан, попробуй ещё раз");
+    throw e;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
