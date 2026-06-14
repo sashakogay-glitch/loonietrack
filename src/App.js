@@ -101,18 +101,7 @@ async function aiScan(b64, mime, type) {
   if(data.error) throw new Error(`API Error: ${data.error}`);
   return data;
 }
-  const res = await fetch("/api/scan", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({b64, mime, type})
-  });
-  const data = await res.json();
-  if(data.error) throw new Error(`API Error: ${data.error}`);
-  return data;}
-
-
-
-// ══════════════════════════════════════════════════════════════════════════════
+ // ══════════════════════════════════════════════════════════════════════════════
 // SHARED STYLES
 // ══════════════════════════════════════════════════════════════════════════════
 const SHARED_CSS = `
