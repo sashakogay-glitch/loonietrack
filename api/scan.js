@@ -1,4 +1,8 @@
-sed -i '1s/^/export const config = { api: { bodyParser: { sizeLimit: "10mb" } } };\n\n/' api/scan.jsexport default async function handler(req, res) {
+export const config = {
+  api: { bodyParser: { sizeLimit: "10mb" } }
+};
+
+export default async function handler(req, res) {
   if(req.method !== "POST") return res.status(405).json({error:"Method not allowed"});
   const { b64, mime, type } = req.body;
   if(!b64 || !mime) return res.status(400).json({error:"Missing image data"});
