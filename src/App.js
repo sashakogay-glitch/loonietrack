@@ -77,15 +77,15 @@ const rangeOf = (p,cu) => {
 
 // ─── Claude API ────────────────────────────────────────────────────────────────
 async function aiScan(b64,mime,type) {
-  const apiKey = process.env.REACT_APP_ANTHROPIC_KEY || "";
-  const catList=type==="corp"?"meals|vehicle|equipment|phone_biz|home_office|marketing|professional|office_sup|other_biz":"grocery|gas|food_out|car|phone|house|other";
-  const catGuide=type==="corp"?"meals=restaurant/food with client, vehicle=gas/parking/uber, equipment=electronics/software, phone_biz=phone/internet, home_office=rent/utilities portion, marketing=ads/printing, professional=lawyer/accountant, office_sup=supplies, other_biz=anything else":"grocery=supermarket, gas=fuel/petro/shell, food_out=restaurant/cafe/takeout/movies, car=lease/insurance/mechanic, phone=rogers/bell/telus, house=rent/hydro/utilities, other=everything else";
-  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:500,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mime,data:b64}},{type:"text",text:`Parse this receipt. Return ONLY valid JSON:\n{"merchant":"name","amount":23.45,"hst":2.71,"date":"YYYY-MM-DD","category":"${catList}","confidence":85${type!=="corp"?',"taxTag":"medical|donations|childcare|none"':''}}\n${catGuide}.`}]}]})});
-  const d=await res.json();
-  if(d.error) throw new Error(`API ${d.error.type}: ${d.error.message} (key:${apiKey?apiKey.slice(0,12)+"...":"MISSING"})`);
-  const txt=d.content?.find(b=>b.type==="text")?.text||"{}";
-  try { return JSON.parse(txt.replace(/```json|```/g,"").trim()); }
-  catch { throw new Error(`Parse failed: ${txt.slice(0,150)}`); }
+  const res = await fetch("/api/scan", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({b64, mime, type})
+  });
+  const data = await res.json();
+  if(data.error) throw new Error(`API Error: ${data.error}`);
+  return data;
+}
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
