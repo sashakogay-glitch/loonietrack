@@ -76,7 +76,31 @@ const rangeOf = (p,cu) => {
 };
 
 // ─── Claude API ────────────────────────────────────────────────────────────────
-async function aiScan(b64,mime,type) {
+async function compressImage(dataUrl, maxW = 1200) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const ratio = Math.min(1, maxW / img.width);
+      const c = document.createElement("canvas");
+      c.width = img.width * ratio;
+      c.height = img.height * ratio;
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL("image/jpeg", 0.75));
+    };
+    img.src = dataUrl;
+  });
+}
+
+async function aiScan(b64, mime, type) {
+  const res = await fetch("/api/scan", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({b64, mime, type})
+  });
+  const data = await res.json();
+  if(data.error) throw new Error(`API Error: ${data.error}`);
+  return data;
+}
   const res = await fetch("/api/scan", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
@@ -546,12 +570,13 @@ function MainApp({ user, onSignOut, onGoAuth }) {
     reader.readAsDataURL(file);
   };
 
-  const onCameraCapture = (dataUrl, mime) => {
-    setCamera(false);
-    setPrev(dataUrl);
-    setPendF({b64: dataUrl.split(",")[1], mime});
-    setTypeM(true);
-  };
+  cconst onCameraCapture = async (dataUrl, mime) => {
+  setCamera(false);
+  const compressed = await compressImage(dataUrl);
+  setPrev(compressed);
+  setPendF({b64: compressed.split(",")[1], mime:"image/jpeg"});
+  setTypeM(true);
+};
 
   const onTypeChosen = async (type) => {
     if(type==="corp"&&!hasCorp){ setTypeM(false); setPrev(null); setPendF(null); setUpgrade("corp"); return; }
