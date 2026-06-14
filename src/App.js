@@ -86,7 +86,7 @@ async function aiScan(b64,mime,type) {
   if(data.error) throw new Error(`API Error: ${data.error}`);
   return data;
 }
-}
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 // SHARED STYLES
