@@ -77,14 +77,20 @@ const rangeOf = (p,cu) => {
 
 // ─── Claude API ────────────────────────────────────────────────────────────────
 async function aiScan(b64,mime,type) {
-  const res = await fetch("/api/scan", {
+  if(!b64) throw new Error("b64 is empty!");
+  if(b64.length < 100) throw new Error("b64 too short: " + b64.length);
+  const bodyStr = JSON.stringify({ b64, mime: mime||"image/jpeg", type });
+  const tp = new Promise((_,r) => setTimeout(() => r(new Error("Timeout 15s - fetch to /api/scan hung")), 15000));
+  const fp = fetch("/api/scan", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ b64, mime: mime||"image/jpeg", type })
+    body: bodyStr
+  }).then(async res => {
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data;
   });
-  const data = await res.json();
-  if (data.error) throw new Error(data.error);
-  return data;
+  return Promise.race([fp, tp]);
 }
 
 
