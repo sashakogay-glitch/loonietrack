@@ -1,17 +1,26 @@
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  if (req.method !== "POST") return res.status(405).json({error:"Method not allowed"});
+  
+  const key = process.env.REACT_APP_ANTHROPIC_KEY;
+  console.log("Key present:", !!key, "Key start:", key ? key.slice(0,15) : "MISSING");
+  console.log("Body keys:", req.body ? Object.keys(req.body) : "NO BODY");
+  console.log("b64 length:", req.body?.b64?.length || 0);
+  
   try {
-    const { b64, mime, type } = req.body;
+    const { b64, mime, type } = req.body || {};
+    if(!b64) return res.status(400).json({error: "No image data received"});
+    if(!key) return res.status(400).json({error: "API key missing on server"});
+    
     const cat = type === "corp"
       ? "meals|vehicle|equipment|phone_biz|home_office|marketing|professional|office_sup|other_biz"
       : "grocery|gas|food_out|car|phone|house|other";
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    
+    console.log("Calling Anthropic API...");
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": process.env.REACT_APP_ANTHROPIC_KEY,
+        "x-api-key": key,
         "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
@@ -20,18 +29,22 @@ export default async function handler(req, res) {
         messages: [{
           role: "user",
           content: [
-            { type: "image", source: { type: "base64", media_type: mime || "image/jpeg", data: b64 } },
-            { type: "text", text: "Parse receipt. Return JSON: {merchant, amount, hst, date, category from [" + cat + "], confidence}" }
+            {type:"image", source:{type:"base64", media_type: mime||"image/jpeg", data: b64}},
+            {type:"text", text:"Parse receipt. Return JSON only: {merchant, amount, hst, date, category from ["+cat+"], confidence}"}
           ]
         }]
       })
     });
-    const data = await response.json();
-    if (data.error) return res.status(400).json({ error: data.error.message });
-    const txt = (data.content || []).find(function(b) { return b.type === "text"; });
-    const result = JSON.parse((txt ? txt.text : "{}").replace(/```json|```/g, "").trim());
-    return res.status(200).json(result);
-  } catch (e) {
-    return res.status(500).json({ error: e.message });
+    
+    console.log("Anthropic status:", r.status);
+    const d = await r.json();
+    console.log("Anthropic response:", JSON.stringify(d).slice(0,200));
+    
+    if (d.error) return res.status(400).json({error: d.error.message});
+    const txt = (d.content||[]).find(b=>b.type==="text")?.text || "{}";
+    return res.status(200).json(JSON.parse(txt.replace(/```json|```/g,"").trim()));
+  } catch(e) {
+    console.log("Error:", e.message);
+    return res.status(500).json({error: e.message});
   }
 }
