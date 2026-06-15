@@ -77,25 +77,43 @@ const rangeOf = (p,cu) => {
 
 // ─── Claude API ────────────────────────────────────────────────────────────────
 async function aiScan(b64,mime,type) {
-  const controller = new AbortController();
-  const timeout = setTimeout(()=>controller.abort(), 25000);
-  try {
-    const res = await fetch("/api/scan", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({b64, mime, type}),
-      signal: controller.signal
-    });
-    const data = await res.json();
-    if(data.error) throw new Error(`API Error: ${data.error}`);
-    return data;
-  } catch(e) {
-    if(e.name==="AbortError") throw new Error("Timeout — чек не распознан, попробуй ещё раз");
-    throw e;
-  } finally {
-    clearTimeout(timeout);
-  }
+  if(!b64 || b64.length < 50) throw new Error("No image captured");
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const timer = setTimeout(() => {
+      xhr.abort();
+      reject(new Error("Timeout: server не ответил за 20 сек"));
+    }, 20000);
+    xhr.open("POST", "/api/scan", true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.onreadystatechange = function() {
+      if(xhr.readyState !== 4) return;
+      clearTimeout(timer);
+      try {
+        const data = JSON.parse(xhr.responseText);
+        if(data.error) reject(new Error(data.error));
+        else resolve(data);
+      } catch(e) {
+        reject(new Error("Response error: " + xhr.status + " " + xhr.responseText.slice(0,100)));
+      }
+    };
+    xhr.onerror = function() {
+      clearTimeout(timer);
+      reject(new Error("Network error - cannot reach server"));
+    };
+    xhr.ontimeout = function() {
+      clearTimeout(timer);
+      reject(new Error("XHR timeout"));
+    };
+    xhr.timeout = 20000;
+    xhr.send(JSON.stringify({ b64, mime: mime||"image/jpeg", type }));
+  });
 }
+
+
+
+
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 // SHARED STYLES
@@ -398,25 +416,14 @@ function CameraScanner({ onCapture, onClose }) {
   const doCapture = () => {
     clearInterval(countRef.current);
     const v=videoRef.current, c=canvasRef.current; if(!v||!c) return;
+    // Capture at max 800px wide, quality 0.5 to keep size under 150KB
     const vw=v.videoWidth||1280, vh=v.videoHeight||720;
-    const sw=window.innerWidth, sh=window.innerHeight;
-    // object-fit:cover scale + offset of video within screen
-    const scale = Math.max(sw/vw, sh/vh);
-    const dispW = vw*scale, dispH = vh*scale;
-    const offX = (dispW - sw)/2, offY = (dispH - sh)/2;
-    // guide frame on screen: 78% width, aspect ratio 1/1.7, centered
-    const frameW = sw*0.78, frameH = frameW*1.7;
-    const frameLeft = (sw - frameW)/2, frameTop = (sh - frameH)/2;
-    // map to video pixel coords
-    const cropX = Math.max(0,(frameLeft + offX)/scale);
-    const cropY = Math.max(0,(frameTop + offY)/scale);
-    const cropW = Math.min(vw-cropX, frameW/scale);
-    const cropH = Math.min(vh-cropY, frameH/scale);
-    c.width=cropW; c.height=cropH;
-    c.getContext("2d").drawImage(v, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+    const sc=Math.min(1, 800/vw);
+    c.width=Math.round(vw*sc); c.height=Math.round(vh*sc);
+    c.getContext("2d").drawImage(v,0,0,c.width,c.height);
     setFlash(true); setTimeout(()=>setFlash(false),180);
     stopCam(); setCountdown(null);
-    setCaptured(c.toDataURL("image/jpeg",.4));
+    setCaptured(c.toDataURL("image/jpeg",0.5));
   };
 
   const retake = () => { setCaptured(null); setReady(false); setCountdown(null); setAutoOff(false); startCam(); };
@@ -549,35 +556,20 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   const del    = async (id) => commit(txns.filter(t=>t.id!==id));
 
   // Resize image to max 1000px wide before sending — reduces payload 4-8x
-  const resizeImg = (dataUrl, maxW=1000) => new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(1, maxW / img.width);
-      const c = document.createElement("canvas");
-      c.width = Math.round(img.width * scale);
-      c.height = Math.round(img.height * scale);
-      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-      resolve(c.toDataURL("image/jpeg", 0.6));
-    };
-    img.src = dataUrl;
-  });
-
   const onFile = (file) => {
     if(!file) return;
     const reader=new FileReader();
-    reader.onload=async(e)=>{
+    reader.onload=(e)=>{
       const url=e.target.result;
-      const small = await resizeImg(url);
-      setPrev(small); setPendF({b64:small.split(",")[1],mime:"image/jpeg"}); setTypeM(true);
+      setPrev(url); setPendF({b64:url.split(",")[1],mime:file.type||"image/jpeg"}); setTypeM(true);
     };
     reader.readAsDataURL(file);
   };
 
-  const onCameraCapture = async (dataUrl, mime) => {
+  const onCameraCapture = (dataUrl, mime) => {
     setCamera(false);
-    const small = await resizeImg(dataUrl);
-    setPrev(small);
-    setPendF({b64: small.split(",")[1], mime:"image/jpeg"});
+    setPrev(dataUrl);
+    setPendF({b64: dataUrl.split(",")[1], mime: mime||"image/jpeg"});
     setTypeM(true);
   };
 
@@ -682,6 +674,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
           {preview&&<img src={preview} alt="" style={{width:180,height:140,objectFit:"cover",borderRadius:18,boxShadow:"0 12px 40px rgba(0,0,0,.18)"}}/>}
           <div style={{display:"flex",gap:8}}>{[0,1,2].map(i=><div key={i} style={{width:9,height:9,borderRadius:"50%",background:"#111",animation:`dot .8s ${i*.2}s ease-in-out infinite alternate`}}/>)}</div>
           <div style={{fontSize:17,fontWeight:600}}>Reading receipt…</div>
+          <div style={{fontSize:12,color:"#888",marginTop:-12}}>Takes 5–15 seconds</div>
         </div>
       )}
 
