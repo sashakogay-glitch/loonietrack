@@ -76,29 +76,41 @@ const rangeOf = (p,cu) => {
 };
 
 // ─── Claude API ────────────────────────────────────────────────────────────────
-async function aiScan(b64, mime, type) {
-  // Compress image to ~30KB before sending
-  const small = await new Promise(resolve => {
+async function aiScan(b64,mime,type) {
+  // Compress image to ~80KB before sending to server
+  const compressed = await new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
-      const c = document.createElement("canvas");
-      const w = Math.min(img.width, 500);
-      c.width = w; c.height = Math.round(img.height * w / img.width);
-      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-      resolve(c.toDataURL("image/jpeg", 0.5).split(",")[1]);
+      const canvas = document.createElement("canvas");
+      const maxW = 800;
+      const scale = Math.min(1, maxW / img.width);
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.6).split(",")[1]);
     };
     img.src = "data:" + mime + ";base64," + b64;
   });
 
   const res = await fetch("/api/scan", {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({b64: small, mime: "image/jpeg", type})
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ b64: compressed, mime: "image/jpeg", type })
   });
-  const d = await res.json();
-  if(d.error) throw new Error(d.error);
-  return d;
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({error: "Server error " + res.status}));
+    throw new Error(err.error || "Server error");
+  }
+
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
 }
+
+
+
+
 // ══════════════════════════════════════════════════════════════════════════════
 // SHARED STYLES
 // ══════════════════════════════════════════════════════════════════════════════
@@ -549,18 +561,9 @@ function MainApp({ user, onSignOut, onGoAuth }) {
 
   const onCameraCapture = (dataUrl, mime) => {
     setCamera(false);
-    const img = new Image();
-    img.onload = () => {
-      const c = document.createElement("canvas");
-      const w = Math.min(img.width, 800);
-      c.width = w; c.height = Math.round(img.height * w / img.width);
-      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-      const small = c.toDataURL("image/jpeg", 0.6);
-      setPrev(small);
-      setPendF({b64: small.split(",")[1], mime: "image/jpeg"});
-      setTypeM(true);
-    };
-    img.src = dataUrl;
+    setPrev(dataUrl);
+    setPendF({b64: dataUrl.split(",")[1], mime: mime||"image/jpeg"});
+    setTypeM(true);
   };
 
   const onTypeChosen = async (type) => {
