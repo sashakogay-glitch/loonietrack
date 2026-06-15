@@ -549,9 +549,18 @@ function MainApp({ user, onSignOut, onGoAuth }) {
 
   const onCameraCapture = (dataUrl, mime) => {
     setCamera(false);
-    setPrev(dataUrl);
-    setPendF({b64: dataUrl.split(",")[1], mime: mime||"image/jpeg"});
-    setTypeM(true);
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      const w = Math.min(img.width, 800);
+      c.width = w; c.height = Math.round(img.height * w / img.width);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      const small = c.toDataURL("image/jpeg", 0.6);
+      setPrev(small);
+      setPendF({b64: small.split(",")[1], mime: "image/jpeg"});
+      setTypeM(true);
+    };
+    img.src = dataUrl;
   };
 
   const onTypeChosen = async (type) => {
