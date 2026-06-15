@@ -77,19 +77,26 @@ const rangeOf = (p,cu) => {
 
 // ─── Claude API ────────────────────────────────────────────────────────────────
 async function aiScan(b64,mime,type) {
-  // Compress image to ~80KB before sending to server
-  const compressed = await new Promise(resolve => {
+  // Compress image - with timeout and error fallback so it never hangs
+  const compressed = await new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(b64), 8000); // fallback: use original if takes too long
     const img = new Image();
+    img.onerror = () => { clearTimeout(timer); resolve(b64); };
     img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const maxW = 800;
-      const scale = Math.min(1, maxW / img.width);
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL("image/jpeg", 0.6).split(",")[1]);
+      clearTimeout(timer);
+      try {
+        const canvas = document.createElement("canvas");
+        const maxW = 800;
+        const scale = Math.min(1, maxW / img.width);
+        canvas.width = Math.round(img.width * scale) || 800;
+        canvas.height = Math.round(img.height * scale) || 600;
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.6).split(",")[1]);
+      } catch(e) {
+        resolve(b64);
+      }
     };
-    img.src = "data:" + mime + ";base64," + b64;
+    img.src = "data:" + (mime||"image/jpeg") + ";base64," + b64;
   });
 
   const res = await fetch("/api/scan", {
@@ -107,6 +114,7 @@ async function aiScan(b64,mime,type) {
   if (data.error) throw new Error(data.error);
   return data;
 }
+
 
 
 
