@@ -77,39 +77,11 @@ const rangeOf = (p,cu) => {
 
 // ─── Claude API ────────────────────────────────────────────────────────────────
 async function aiScan(b64,mime,type) {
-  // Compress image - with timeout and error fallback so it never hangs
-  const compressed = await new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(b64), 8000); // fallback: use original if takes too long
-    const img = new Image();
-    img.onerror = () => { clearTimeout(timer); resolve(b64); };
-    img.onload = () => {
-      clearTimeout(timer);
-      try {
-        const canvas = document.createElement("canvas");
-        const maxW = 800;
-        const scale = Math.min(1, maxW / img.width);
-        canvas.width = Math.round(img.width * scale) || 800;
-        canvas.height = Math.round(img.height * scale) || 600;
-        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.6).split(",")[1]);
-      } catch(e) {
-        resolve(b64);
-      }
-    };
-    img.src = "data:" + (mime||"image/jpeg") + ";base64," + b64;
-  });
-
   const res = await fetch("/api/scan", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ b64: compressed, mime: "image/jpeg", type })
+    body: JSON.stringify({ b64, mime: mime||"image/jpeg", type })
   });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({error: "Server error " + res.status}));
-    throw new Error(err.error || "Server error");
-  }
-
   const data = await res.json();
   if (data.error) throw new Error(data.error);
   return data;
