@@ -77,21 +77,39 @@ const rangeOf = (p,cu) => {
 
 // ─── Claude API ────────────────────────────────────────────────────────────────
 async function aiScan(b64,mime,type) {
-  if(!b64) throw new Error("b64 is empty!");
-  if(b64.length < 100) throw new Error("b64 too short: " + b64.length);
-  const bodyStr = JSON.stringify({ b64, mime: mime||"image/jpeg", type });
-  const tp = new Promise((_,r) => setTimeout(() => r(new Error("Timeout 15s - fetch to /api/scan hung")), 15000));
-  const fp = fetch("/api/scan", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: bodyStr
-  }).then(async res => {
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    return data;
+  if(!b64 || b64.length < 50) throw new Error("No image captured");
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const timer = setTimeout(() => {
+      xhr.abort();
+      reject(new Error("Timeout: server не ответил за 20 сек"));
+    }, 20000);
+    xhr.open("POST", "/api/scan", true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.onreadystatechange = function() {
+      if(xhr.readyState !== 4) return;
+      clearTimeout(timer);
+      try {
+        const data = JSON.parse(xhr.responseText);
+        if(data.error) reject(new Error(data.error));
+        else resolve(data);
+      } catch(e) {
+        reject(new Error("Response error: " + xhr.status + " " + xhr.responseText.slice(0,100)));
+      }
+    };
+    xhr.onerror = function() {
+      clearTimeout(timer);
+      reject(new Error("Network error - cannot reach server"));
+    };
+    xhr.ontimeout = function() {
+      clearTimeout(timer);
+      reject(new Error("XHR timeout"));
+    };
+    xhr.timeout = 20000;
+    xhr.send(JSON.stringify({ b64, mime: mime||"image/jpeg", type }));
   });
-  return Promise.race([fp, tp]);
 }
+
 
 
 
@@ -398,11 +416,14 @@ function CameraScanner({ onCapture, onClose }) {
   const doCapture = () => {
     clearInterval(countRef.current);
     const v=videoRef.current, c=canvasRef.current; if(!v||!c) return;
-    c.width=v.videoWidth||1280; c.height=v.videoHeight||720;
-    c.getContext("2d").drawImage(v,0,0);
+    // Capture at max 800px wide, quality 0.5 to keep size under 150KB
+    const vw=v.videoWidth||1280, vh=v.videoHeight||720;
+    const sc=Math.min(1, 800/vw);
+    c.width=Math.round(vw*sc); c.height=Math.round(vh*sc);
+    c.getContext("2d").drawImage(v,0,0,c.width,c.height);
     setFlash(true); setTimeout(()=>setFlash(false),180);
     stopCam(); setCountdown(null);
-    const _c2=document.createElement("canvas"),_s=Math.min(1,640/c.width);_c2.width=Math.round(c.width*_s);_c2.height=Math.round(c.height*_s);_c2.getContext("2d").drawImage(c,0,0,_c2.width,_c2.height);setCaptured(_c2.toDataURL("image/jpeg",0.4));
+    setCaptured(c.toDataURL("image/jpeg",0.5));
   };
 
   const retake = () => { setCaptured(null); setReady(false); setCountdown(null); setAutoOff(false); startCam(); };
@@ -653,6 +674,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
           {preview&&<img src={preview} alt="" style={{width:180,height:140,objectFit:"cover",borderRadius:18,boxShadow:"0 12px 40px rgba(0,0,0,.18)"}}/>}
           <div style={{display:"flex",gap:8}}>{[0,1,2].map(i=><div key={i} style={{width:9,height:9,borderRadius:"50%",background:"#111",animation:`dot .8s ${i*.2}s ease-in-out infinite alternate`}}/>)}</div>
           <div style={{fontSize:17,fontWeight:600}}>Reading receipt…</div>
+          <div style={{fontSize:12,color:"#888",marginTop:-12}}>Takes 5–15 seconds</div>
         </div>
       )}
 
