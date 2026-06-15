@@ -1,1 +1,1 @@
-{}
+echo '{"functions":{"api/scan.js":{"maxDuration":30}}}' > vercel.json
