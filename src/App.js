@@ -76,22 +76,29 @@ const rangeOf = (p,cu) => {
 };
 
 // ─── Claude API ────────────────────────────────────────────────────────────────
-async function aiScan(b64,mime,type) {
-  const apiKey = process.env.REACT_APP_ANTHROPIC_KEY||"";
-  const catList=type==="corp"?"meals|vehicle|equipment|phone_biz|home_office|marketing|professional|office_sup|other_biz":"grocery|gas|food_out|car|phone|house|other";
-  const catGuide=type==="corp"?"meals=restaurant/food,vehicle=gas/parking,equipment=electronics,phone_biz=phone/internet,home_office=rent/utilities,marketing=ads,professional=lawyer/accountant,office_sup=supplies,other_biz=other":"grocery=supermarket,gas=fuel/petro/shell,food_out=restaurant/cafe/takeout,car=lease/insurance/mechanic,phone=rogers/bell/telus,house=rent/hydro,other=everything else";
-  const taxTag=type!=="corp"?',"taxTag":"medical|donations|childcare|none"' :"";
-  const tp=new Promise((_,r)=>setTimeout(()=>r(new Error("Timeout")),25000));
-  const fp=fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:400,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mime,data:b64}},{type:"text",text:`Parse this receipt. Return ONLY valid JSON: {"merchant":"name","amount":0.00,"hst":0.00,"date":"YYYY-MM-DD","category":"${catList}","confidence":85${taxTag}}. Guide: ${catGuide}`}]}]})});
-  const res=await Promise.race([fp,tp]);
-  const d=await res.json();
-  if(d.error) throw new Error(`${d.error.type}: ${d.error.message}`);
-  const txt=d.content?.find(b=>b.type==="text")?.text||"{}";
-  try{return JSON.parse(txt.replace(/```json|```/g,"").trim());}catch{throw new Error("Parse fail: "+txt.slice(0,80));}
+async function aiScan(b64, mime, type) {
+  // Compress image to ~30KB before sending
+  const small = await new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      const w = Math.min(img.width, 500);
+      c.width = w; c.height = Math.round(img.height * w / img.width);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL("image/jpeg", 0.5).split(",")[1]);
+    };
+    img.src = "data:" + mime + ";base64," + b64;
+  });
+
+  const res = await fetch("/api/scan", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({b64: small, mime: "image/jpeg", type})
+  });
+  const d = await res.json();
+  if(d.error) throw new Error(d.error);
+  return d;
 }
-
-
-
 // ══════════════════════════════════════════════════════════════════════════════
 // SHARED STYLES
 // ══════════════════════════════════════════════════════════════════════════════
