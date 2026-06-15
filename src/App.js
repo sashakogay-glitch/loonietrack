@@ -424,7 +424,7 @@ function CameraScanner({ onCapture, onClose }) {
     c.getContext("2d").drawImage(v,0,0);
     setFlash(true); setTimeout(()=>setFlash(false),180);
     stopCam(); setCountdown(null);
-    setCaptured(c.toDataURL("image/jpeg",.85));
+    const _c2=document.createElement("canvas"),_s=Math.min(1,640/c.width);_c2.width=Math.round(c.width*_s);_c2.height=Math.round(c.height*_s);_c2.getContext("2d").drawImage(c,0,0,_c2.width,_c2.height);setCaptured(_c2.toDataURL("image/jpeg",0.4));
   };
 
   const retake = () => { setCaptured(null); setReady(false); setCountdown(null); setAutoOff(false); startCam(); };
