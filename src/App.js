@@ -841,7 +841,19 @@ function MainApp({ user, onSignOut, onGoAuth }) {
         );
       })()}
 
-      {upgrade&&<UpgradeModal reason={upgrade} isGuest={isGuest} onClose={()=>setUpgrade(null)} onSignUp={()=>{setUpgrade(null);onGoAuth();}} onUpgrade={(plan)=>{alert(`Stripe Checkout coming soon!\n\n${plan==="personal"?"Personal Plan — $3.99/month":"Business Plan — $7.99/month"}\n\nIn production this opens Stripe.`);setUpgrade(null);}}/>}
+      {upgrade&&<UpgradeModal reason={upgrade} isGuest={isGuest} onClose={()=>setUpgrade(null)} onSignUp={()=>{setUpgrade(null);onGoAuth();}} onUpgrade={async(plan)=>{
+  if(!auth.currentUser){setUpgrade(null);onGoAuth();return;}
+  try{
+    const r=await fetch("/api/create-checkout-session",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({plan,userId:auth.currentUser.uid,email:auth.currentUser.email})
+    });
+    const data=await r.json();
+    if(data.url){window.location.href=data.url;}
+    else{alert("Checkout error: "+(data.error||"unknown error"));}
+  }catch(e){alert("Network error: "+e.message);}
+}}/>}
 
       {undo&&(
         <div style={{position:"fixed",bottom:24,left:12,right:12,zIndex:150,background:"#111",color:"#fff",borderRadius:16,padding:"13px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 6px 28px rgba(0,0,0,.25)",animation:"up .25s ease"}}>
