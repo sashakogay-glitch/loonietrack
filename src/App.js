@@ -1,5 +1,22 @@
 import { useState, useEffect, useRef } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { auth, dbFs } from "./firebase";
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+
+// ─── Firebase auth error → friendly message ────────────────────────────────────
+function authErrorMsg(code) {
+  switch(code) {
+    case "auth/email-already-in-use": return "This email is already registered. Try signing in instead.";
+    case "auth/invalid-email":        return "Please enter a valid email address.";
+    case "auth/weak-password":        return "Password must be at least 6 characters.";
+    case "auth/user-not-found":
+    case "auth/wrong-password":
+    case "auth/invalid-credential":   return "Incorrect email or password.";
+    case "auth/too-many-requests":    return "Too many attempts. Please try again later.";
+    default: return "Something went wrong. Please try again.";
+  }
+}
 
 // ─── Loonie Icon — coin image ─────────────────────────────────────────────────
 const LoonieIcon = ({ size = 24 }) => (
@@ -149,13 +166,22 @@ function AuthScreen({ onGuest, onAuth }) {
 
   const submit = async () => {
     if(mode==="signup"&&!name.trim()){setErr("Please enter your name");return;}
-    if(!contact.trim()){setErr("Please enter your email or phone");return;}
+    if(!contact.trim()){setErr("Please enter your email");return;}
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.trim())){setErr("Please enter a valid email address");return;}
     if(pass.length<6){setErr("Password must be at least 6 characters");return;}
     setLoad(true); setErr("");
-    await new Promise(r=>setTimeout(r,700));
-    const user={id:gid(),name:name||contact.split("@")[0],contact,plan:"free",joinedAt:new Date().toISOString()};
-    await db.set("lt_user",user);
-    setLoad(false); onAuth(user);
+    try {
+      if(mode==="signup") {
+        const cred = await createUserWithEmailAndPassword(auth, contact.trim(), pass);
+        if(name.trim()) await updateProfile(cred.user, { displayName: name.trim() });
+      } else {
+        await signInWithEmailAndPassword(auth, contact.trim(), pass);
+      }
+      // App root's onAuthStateChanged listener takes over navigation from here
+    } catch(e) {
+      setErr(authErrorMsg(e.code));
+      setLoad(false);
+    }
   };
 
   const inputStyle = {
@@ -257,8 +283,8 @@ function AuthScreen({ onGuest, onAuth }) {
                 </div>
               )}
               <div>
-                <div style={{fontSize:11,fontWeight:700,color:"#aaa",letterSpacing:".07em",marginBottom:7}}>EMAIL OR PHONE</div>
-                <input value={contact} onChange={e=>{setContact(e.target.value);setErr("");}} placeholder="john@email.com or 647-555-0123" inputMode="email" style={inputStyle}
+                <div style={{fontSize:11,fontWeight:700,color:"#aaa",letterSpacing:".07em",marginBottom:7}}>EMAIL</div>
+                <input value={contact} onChange={e=>{setContact(e.target.value);setErr("");}} placeholder="john@email.com" inputMode="email" style={inputStyle}
                   onFocus={e=>{e.target.style.borderColor="#E84D0E";e.target.style.boxShadow="0 0 0 3px rgba(232,77,14,.08)";}}
                   onBlur={e=>{e.target.style.borderColor="#E5E4E0";e.target.style.boxShadow="none";}}/>
               </div>
@@ -540,9 +566,25 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   const [showProf,setShowP] = useState(false);
   const undoT = useRef();
 
-  useEffect(()=>{ db.get("ft5_txns").then(t=>{setTxns(t||[]);setRdy(true);}); },[]);
+  useEffect(()=>{
+    if(user?.uid) {
+      getDoc(doc(dbFs,"users",user.uid)).then(snap=>{
+        setTxns(snap.exists()?(snap.data().txns||[]):[]);
+        setRdy(true);
+      }).catch(()=>{ setTxns([]); setRdy(true); });
+    } else {
+      db.get("ft5_txns").then(t=>{setTxns(t||[]);setRdy(true);});
+    }
+  },[user?.uid]);
 
-  const commit = async (l) => { setTxns(l); await db.set("ft5_txns",l); };
+  const commit = async (l) => {
+    setTxns(l);
+    if(user?.uid) {
+      try { await setDoc(doc(dbFs,"users",user.uid), { txns: l }, { merge: true }); } catch(e) { console.error("Firestore save failed:", e); }
+    } else {
+      await db.set("ft5_txns",l);
+    }
+  };
   const now = new Date();
   const monthUsed = txns.filter(t=>{ const td=parseDate(t.date||t.at); return td.getMonth()===now.getMonth()&&td.getFullYear()===now.getFullYear(); }).length;
 
@@ -650,7 +692,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
             {!isPro&&<button className="btn" onClick={()=>{setShowP(false);setUpgrade("corp");}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#E84D0E",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>⭐ Upgrade to Pro</button>}
             {isGuest
               ? <button className="btn" onClick={()=>{setShowP(false);onGoAuth();}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#555",background:"none",borderRadius:8}}>📧 Sign Up / Sign In</button>
-              : <button className="btn" onClick={async()=>{await db.remove("lt_user");onSignOut();}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#888",background:"none",borderRadius:8}}>🚪 Sign Out</button>
+              : <button className="btn" onClick={onSignOut} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#888",background:"none",borderRadius:8}}>🚪 Sign Out</button>
             }
           </div>
         </>
@@ -1044,21 +1086,40 @@ export default function App() {
   const [state, setState] = useState("loading"); // loading | auth | app
   const [user,  setUser]  = useState(null);
 
-  useEffect(()=>{ db.get("lt_user").then(u=>{ if(u){ setUser(u); setState("app"); } else { setState("auth"); } }); },[]);
+  useEffect(()=>{
+    const unsub = onAuthStateChanged(auth, (fbUser)=>{
+      if(fbUser) {
+        setUser({
+          id: fbUser.uid,
+          uid: fbUser.uid,
+          name: fbUser.displayName || (fbUser.email?fbUser.email.split("@")[0]:"User"),
+          contact: fbUser.email,
+          plan: "free",
+        });
+        setState("app");
+      } else {
+        db.get("lt_guest").then(isGuest=>{
+          if(isGuest) { setUser({guest:true,plan:"free"}); setState("app"); }
+          else setState("auth");
+        });
+      }
+    });
+    return unsub;
+  },[]);
 
   if(state==="loading") return <div style={{minHeight:"100vh",background:"#F5F4F0",display:"flex",alignItems:"center",justifyContent:"center"}}><LoonieIcon size={64}/></div>;
 
   if(state==="auth") return (
     <AuthScreen
-      onGuest={()=>{ setUser({guest:true,plan:"free"}); setState("app"); }}
-      onAuth={u=>{ setUser(u); setState("app"); }}
+      onGuest={()=>{ db.set("lt_guest",true); setUser({guest:true,plan:"free"}); setState("app"); }}
+      onAuth={()=>{}}
     />
   );
 
   return (
     <MainApp
       user={user}
-      onSignOut={()=>{ setUser(null); setState("auth"); }}
+      onSignOut={async ()=>{ await db.remove("lt_guest"); if(auth.currentUser) await signOut(auth); setUser(null); setState("auth"); }}
       onGoAuth={()=>{ setUser(null); setState("auth"); }}
     />
   );
