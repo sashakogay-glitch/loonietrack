@@ -1,19 +1,25 @@
 const Stripe = require("stripe");
 const admin = require("firebase-admin");
 
-// Initialize Firebase Admin (only once)
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    }),
-  });
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY
+    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
+    : undefined;
+
+  if (!privateKey) {
+    console.error("FIREBASE_PRIVATE_KEY is missing");
+  } else {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: privateKey,
+      }),
+    });
+  }
 }
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-const db = admin.firestore();
 
 module.exports.config = { api: { bodyParser: false } };
 
@@ -31,6 +37,12 @@ module.exports = async function handler(req, res) {
 
   const sig = req.headers["stripe-signature"];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    console.error("STRIPE_WEBHOOK_SECRET is missing");
+    return res.status(500).json({ error: "Webhook secret missing" });
+  }
+
   const rawBody = await getRawBody(req);
 
   let event;
@@ -46,7 +58,10 @@ module.exports = async function handler(req, res) {
     const userId = session.client_reference_id;
     const plan = session.metadata?.plan;
 
-    if (userId && plan) {
+    console.log("Payment completed:", { userId, plan });
+
+    if (userId && plan && admin.apps.length) {
+      const db = admin.firestore();
       await db.collection("users").doc(userId).set({
         plan: plan,
         stripeCustomerId: session.customer,
