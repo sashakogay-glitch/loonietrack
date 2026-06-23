@@ -209,11 +209,11 @@ function AuthScreen({ onGuest, onAuth }) {
 
   {/* CHOICE SCREEN */}
   {mode==="choice"&&(
-    <div style={{animation:"fadeUp .4s ease",display:"flex",flexDirection:"column",minHeight:"100%"}}>  
+    <div style={{animation:"fadeUp .4s ease",display:"flex",flexDirection:"column",minHeight:"100%",justifyContent:"space-between"}}>
 <div style={{marginBottom:24}}>
         <div style={{fontSize:"8.5vw",fontWeight:700,letterSpacing:'-.5px',marginBottom:8}}>
-  <div style={{textAlign:"left"}}>Control your loonies —</div>
-  <div style={{textAlign:"right"}}>save millions.</div>
+  <div style={{textAlign:"left"}}>Control your loonies</div>
+  <div style={{textAlign:"right"}}>— save millions.</div>
 </div>
         <div style={{fontSize:14,color:"#888",lineHeight:1.7}}>
           Scan receipts, track expenses, and generate Ontario tax reports — personal and corporate.
