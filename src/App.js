@@ -209,8 +209,8 @@ function AuthScreen({ onGuest, onAuth }) {
 
   {/* CHOICE SCREEN */}
   {mode==="choice"&&(
-    <div style={{animation:"fadeUp .4s ease",display:"flex",flexDirection:"column",minHeight:"100%",justifyContent:"space-between"}}>
-<div style={{marginBottom:24}}>
+    <div style={{animation:"fadeUp .4s ease",display:"flex",flexDirection:"column",flex:1,justifyContent:"space-between"}}>
+      <div style={{marginBottom:24}}>
         <div style={{fontSize:"8.5vw",fontWeight:700,letterSpacing:'-.5px',marginBottom:8}}>
   <div style={{textAlign:"left"}}>Control your loonies</div>
   <div style={{textAlign:"right"}}>— save millions.</div>
