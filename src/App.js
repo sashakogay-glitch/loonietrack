@@ -209,7 +209,7 @@ function AuthScreen({ onGuest, onAuth }) {
 
   {/* CHOICE SCREEN */}
   {mode==="choice"&&(
-    <div style={{animation:"fadeUp .4s ease",display:"flex",flexDirection:"column",flex:1,justifyContent:"space-between"}}>
+    <div style={{animation:"fadeUp .4s ease",display:"flex",flexDirection:"column",flex:1}}>
       <div style={{marginBottom:24}}>
         <div style={{fontSize:"8.5vw",fontWeight:700,letterSpacing:'-.5px',marginBottom:8}}>
   <div style={{textAlign:"left"}}>Control your loonies</div>
@@ -774,7 +774,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
                 </button>
               ))}
             </div>
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:"auto"}}>
               <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",letterSpacing:".06em",marginBottom:5}}>MERCHANT</div><input value={manual.merchant} onChange={e=>setManual(m=>({...m,merchant:e.target.value}))} placeholder="e.g. Loblaws" style={{width:"100%",padding:"12px 14px",border:"1.5px solid #E5E4E0",borderRadius:12,fontSize:14,fontFamily:"inherit",background:"#fff",outline:"none"}}/></div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",letterSpacing:".06em",marginBottom:5}}>AMOUNT $</div><input type="number" inputMode="decimal" value={manual.amount} onChange={e=>setManual(m=>({...m,amount:e.target.value}))} placeholder="0.00" style={{width:"100%",padding:"12px 14px",border:"1.5px solid #E5E4E0",borderRadius:12,fontSize:14,fontFamily:"inherit",background:"#fff",outline:"none"}}/></div>
