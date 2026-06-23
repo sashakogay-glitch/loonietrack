@@ -248,50 +248,6 @@ function AuthScreen({ onGuest, onAuth }) {
       </div>
     </div>
   )}
-        {/* CHOICE SCREEN */}
-        {mode==="choice"&&(
-          <div style={{animation:"fadeUp .4s ease"}}>
-            <div style={{marginBottom:32}}>
-              <div style={{fontSize:17,fontWeight:600,letterSpacing:'-.3px',marginBottom:8}}>
-                Control your loonies,<br/>save millions.
-              </div>
-              <div style={{fontSize:14,color:"#888",lineHeight:1.7}}>
-                Scan receipts, track expenses, and generate Ontario tax reports — personal and corporate.
-              </div>
-            </div>
-
-            {/* Plans preview */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:32}}>
-              {[
-                {icon:"👤",label:"Guest",price:"Free",sub:"10 receipts/mo",color:"#9CA3AF"},
-                {icon:"⭐",label:"Personal",price:"$3.99",sub:"/month · Unlimited",color:"#E84D0E"},
-                {icon:"💼",label:"Business",price:"$7.99",sub:"Personal + Corp",color:"#4F46E5"},
-              ].map((p,i)=>(
-                <div key={i} style={{background:"#fff",borderRadius:16,padding:"14px 10px",textAlign:"center",boxShadow:"0 2px 12px rgba(0,0,0,.06)",border:`1.5px solid ${i===1?"rgba(232,77,14,.2)":"#E8E7E3"}`}}>
-                  <div style={{fontSize:22,marginBottom:6}}>{p.icon}</div>
-                  <div style={{fontSize:11,fontWeight:700,color:p.color,letterSpacing:".04em",marginBottom:4}}>{p.label.toUpperCase()}</div>
-                  <div style={{fontSize:15,fontWeight:600}}>{p.price}</div>
-                  <div style={{fontSize:10,color:"#aaa",marginTop:2}}>{p.sub}</div>
-                </div>
-              ))}
-            </div>
-
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              {/* Sign up CTA */}
-              <button className="btn" onClick={()=>setMode("signup")} style={{width:"100%",padding:"18px",borderRadius:18,background:"linear-gradient(135deg,#E84D0E,#F97316)",color:"#fff",fontSize:15,fontWeight:600,boxShadow:"0 8px 24px rgba(232,77,14,.3)"}}>
-                Create Free Account →
-              </button>
-              {/* Sign in */}
-              <button className="btn" onClick={()=>setMode("signin")} style={{width:"100%",padding:"16px",borderRadius:16,background:"#fff",border:"1.5px solid #E5E4E0",color:"#111",fontSize:14,fontWeight:600,boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
-                Sign In
-              </button>
-              {/* Guest */}
-              <button className="btn" onClick={onGuest} style={{width:"100%",padding:"14px",borderRadius:14,background:"none",color:"#aaa",fontSize:13,fontWeight:600}}>
-                Continue as Guest — {FREE_LIMIT} receipts/month
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* SIGN IN / SIGN UP FORM */}
         {(mode==="signin"||mode==="signup")&&(
