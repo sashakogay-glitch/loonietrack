@@ -15,7 +15,7 @@ if (!admin.apps.length) {
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const db = admin.firestore();
 
-export const config = { api: { bodyParser: false } };
+module.exports.config = { api: { bodyParser: false } };
 
 async function getRawBody(req) {
   return new Promise((resolve, reject) => {
