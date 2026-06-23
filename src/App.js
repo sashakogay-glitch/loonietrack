@@ -202,7 +202,7 @@ function AuthScreen({ onGuest, onAuth }) {
         <span style={{fontSize:10,color:"#aaa",marginTop:2}}>🍁 Canada · Ontario</span>
       </div>
 
-      <div style={{flex:1,width:"100%",padding:"32px 20px 40px",display:"flex",flexDirection:"column",background:"linear-gradient(180deg,#FAFAF8 0%,#F0EFEA 100%)",position:"relative",overflow:"hidden"}}>
+      <div style={{flex:1,width:"100%",padding:"48px 20px 40px",display:"flex",flexDirection:"column",background:"linear-gradient(180deg,#FAFAF8 0%,#F0EFEA 100%)",position:"relative",overflow:"hidden"}}>
   {/* Watermarks */}
   <div style={{position:"absolute",bottom:-20,left:-20,fontSize:140,opacity:.06,userSelect:"none",lineHeight:1}}>🪙</div>
   <div style={{position:"absolute",bottom:-10,right:-20,fontSize:120,opacity:.06,userSelect:"none",lineHeight:1}}>🍁</div>
@@ -236,7 +236,7 @@ function AuthScreen({ onGuest, onAuth }) {
         ))}
       </div>
 
-      <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:"auto"}}>
+      <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:32}}>
         <button className="btn" onClick={()=>setMode("signup")} style={{width:"100%",padding:"18px",borderRadius:18,background:"linear-gradient(135deg,#E84D0E,#F97316)",color:"#fff",fontSize:15,fontWeight:600,boxShadow:"0 8px 24px rgba(232,77,14,.3)"}}>
           Create Free Account →
         </button>
@@ -774,7 +774,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
                 </button>
               ))}
             </div>
-            <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:"auto"}}>
+            <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:32}}>
               <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",letterSpacing:".06em",marginBottom:5}}>MERCHANT</div><input value={manual.merchant} onChange={e=>setManual(m=>({...m,merchant:e.target.value}))} placeholder="e.g. Loblaws" style={{width:"100%",padding:"12px 14px",border:"1.5px solid #E5E4E0",borderRadius:12,fontSize:14,fontFamily:"inherit",background:"#fff",outline:"none"}}/></div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",letterSpacing:".06em",marginBottom:5}}>AMOUNT $</div><input type="number" inputMode="decimal" value={manual.amount} onChange={e=>setManual(m=>({...m,amount:e.target.value}))} placeholder="0.00" style={{width:"100%",padding:"12px 14px",border:"1.5px solid #E5E4E0",borderRadius:12,fontSize:14,fontFamily:"inherit",background:"#fff",outline:"none"}}/></div>
