@@ -577,7 +577,7 @@ const data = snap.exists() ? snap.data() : {};
     } else {
       db.get("ft5_txns").then(t=>{setTxns(t||[]);setRdy(true);});
     }
-  },[user?.uid]);
+  },[user?.uid, user?.contact]);
 
   const commit = async (l) => {
     setTxns(l);
