@@ -1103,13 +1103,26 @@ export default function App() {
   useEffect(()=>{
     const unsub = onAuthStateChanged(auth, (fbUser)=>{
       if(fbUser) {
-        setUser({
-          id: fbUser.uid,
-          uid: fbUser.uid,
-          name: fbUser.displayName || (fbUser.email?fbUser.email.split("@")[0]:"User"),
-          contact: fbUser.email,
+        getDoc(doc(dbFs,"users",fbUser.uid)).then(snap=>{
+          const data = snap.exists() ? snap.data() : {};
+          setUser({
+            id: fbUser.uid,
+            uid: fbUser.uid,
+            name: fbUser.displayName || (fbUser.email?fbUser.email.split("@")[0]:"User"),
+            contact: fbUser.email,
+            plan: data.plan || "free",
+          });
+          setState("app");
+        }).catch(()=>{
+          setUser({
+            id: fbUser.uid,
+            uid: fbUser.uid,
+            name: fbUser.displayName || (fbUser.email?fbUser.email.split("@")[0]:"User"),
+            contact: fbUser.email,
+            plan: "free",
+          });
+          setState("app");
         });
-        setState("app");
       } else {
         db.get("lt_guest").then(isGuest=>{
           if(isGuest) { setUser({guest:true,plan:"free"}); setState("app"); }
