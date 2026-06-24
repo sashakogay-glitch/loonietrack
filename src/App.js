@@ -571,7 +571,6 @@ function MainApp({ user, onSignOut, onGoAuth }) {
     if(user?.uid) {
       getDoc(doc(dbFs,"users",user.uid)).then(snap=>{
 const data = snap.exists() ? snap.data() : {};
-        console.log("Setting txns:", data.txns); setTxns(data.txns||[]);
 
         setRdy(true);      }).catch(()=>{ setTxns([]); setRdy(true); });
     } else {
