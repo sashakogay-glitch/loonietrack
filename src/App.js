@@ -572,7 +572,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
       getDoc(doc(dbFs,"users",user.uid)).then(snap=>{
 const data = snap.exists() ? snap.data() : {};
         setTxns(data.txns||[]);
-        if(data.plan) setUser(u=>({...u, plan: data.plan}));
+        console.log("Firestore plan:", data.plan, data); if(data.plan) setUser(u=>({...u, plan: data.plan}));
         setRdy(true);      }).catch(()=>{ setTxns([]); setRdy(true); });
     } else {
       db.get("ft5_txns").then(t=>{setTxns(t||[]);setRdy(true);});
