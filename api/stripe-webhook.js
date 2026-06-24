@@ -1,23 +1,5 @@
 const Stripe = require("stripe");
 
-let adminApp = null;
-
-function getAdmin() {
-  if (adminApp) return adminApp;
-  const admin = require("firebase-admin");
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
-      }),
-    });
-  }
-  adminApp = admin;
-  return admin;
-}
-
 module.exports.config = { api: { bodyParser: false } };
 
 async function getRawBody(req) {
@@ -27,6 +9,46 @@ async function getRawBody(req) {
     req.on("end", () => resolve(Buffer.concat(chunks)));
     req.on("error", reject);
   });
+}
+
+async function getAccessToken() {
+  const { GoogleAuth } = require("google-auth-library");
+  const auth = new GoogleAuth({
+    credentials: {
+      client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      private_key: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+    },
+    scopes: ["https://www.googleapis.com/auth/datastore"],
+  });
+  const client = await auth.getClient();
+  const token = await client.getAccessToken();
+  return token.token;
+}
+
+async function updateFirestore(userId, plan, customerId, subscriptionId) {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const token = await getAccessToken();
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}`;
+  const body = {
+    fields: {
+      plan: { stringValue: plan },
+      stripeCustomerId: { stringValue: customerId || "" },
+      subscriptionId: { stringValue: subscriptionId || "" },
+    }
+  };
+  const res = await fetch(url + "?updateMask.fieldPaths=plan&updateMask.fieldPaths=stripeCustomerId&updateMask.fieldPaths=subscriptionId", {
+    method: "PATCH",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error("Firestore PATCH failed: " + err);
+  }
+  return res.json();
 }
 
 module.exports = async function handler(req, res) {
@@ -41,7 +63,7 @@ module.exports = async function handler(req, res) {
   try {
     event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
   } catch (err) {
-    console.error("Webhook error:", err.message);
+    console.error("Webhook signature error:", err.message);
     return res.status(400).json({ error: err.message });
   }
 
@@ -53,15 +75,8 @@ module.exports = async function handler(req, res) {
 
     if (userId && plan) {
       try {
-        const admin = getAdmin();
-        const db = admin.firestore();
-        await db.collection("users").doc(userId).set({
-          plan: plan,
-          stripeCustomerId: session.customer,
-          subscriptionId: session.subscription,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        }, { merge: true });
-        console.log("Updated plan for user:", userId);
+        await updateFirestore(userId, plan, session.customer, session.subscription);
+        console.log("Firestore updated for user:", userId);
       } catch (e) {
         console.error("Firestore error:", e.message);
       }
