@@ -1106,7 +1106,6 @@ export default function App() {
         setUser({
           id: fbUser.uid,
           uid: fbUser.uid,
-          name: fbUser.displayName || (fbUser.email?fbUser.email.split("@")[0]:"User"),
           contact: fbUser.email,
           plan: "free",
         });
