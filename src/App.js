@@ -570,9 +570,10 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   useEffect(()=>{
     if(user?.uid) {
       getDoc(doc(dbFs,"users",user.uid)).then(snap=>{
-        setTxns(snap.exists()?(snap.data().txns||[]):[]);
-        setRdy(true);
-      }).catch(()=>{ setTxns([]); setRdy(true); });
+const data = snap.exists() ? snap.data() : {};
+        setTxns(data.txns||[]);
+        if(data.plan) setUser(u=>({...u, plan: data.plan}));
+        setRdy(true);      }).catch(()=>{ setTxns([]); setRdy(true); });
     } else {
       db.get("ft5_txns").then(t=>{setTxns(t||[]);setRdy(true);});
     }
