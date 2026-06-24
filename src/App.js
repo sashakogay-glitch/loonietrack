@@ -669,7 +669,6 @@ const data = snap.exists() ? snap.data() : {};
         <div style={{display:"flex",alignItems:"center",gap:7,marginRight:"auto"}}>
           <LoonieIcon size={22}/>
           <span style={{fontSize:14,fontWeight:600,letterSpacing:"-.3px"}}>LoonieTrack</span>
-          {isPro&&<span style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:100,background:hasCorp?"linear-gradient(135deg,#4F46E5,#7C3AED)":"linear-gradient(135deg,#E84D0E,#F97316)",color:"#fff",letterSpacing:".04em"}}>{hasCorp?"BUSINESS":"PERSONAL"}</span>}
         </div>
         {[{id:"home",icon:"🏠",l:"Home"},{id:"reports",icon:"📊",l:"Reports"},{id:"tax",icon:"🍁",l:"Tax"}].map(v=>(
           <button key={v.id} className="btn" onClick={()=>setTab(v.id)} style={{display:"flex",alignItems:"center",gap:4,padding:"6px 10px",borderRadius:100,background:tab===v.id?"#111":"none",border:"none",color:tab===v.id?"#fff":"#aaa",fontFamily:"inherit",fontSize:11,fontWeight:700,transition:"all .15s"}}>
