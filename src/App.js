@@ -1114,15 +1114,15 @@ export default function App() {
       if(fbUser) {
         onSnapshot(doc(dbFs,"users",fbUser.uid),(snap)=>{
           const data = snap.exists() ? snap.data() : {};
-          setTxns(data.txns||[]);
-          setUser({
+          setUser(u=>({
+            ...(u||{}),
             id: fbUser.uid,
             uid: fbUser.uid,
             name: fbUser.displayName || (fbUser.email?fbUser.email.split("@")[0]:"User"),
             contact: fbUser.email,
             plan: data.plan || "free",
             txns: data.txns || [],
-          });
+          }));
           setState("app");
         });
       } else {
