@@ -566,7 +566,17 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   const [upgrade, setUpgrade]=useState(null);
   const [showProf,setShowP] = useState(false);
   const undoT = useRef();
-
+useEffect(()=>{
+    if(window.location.search.includes("upgrade=success")&&user?.uid){
+      setTimeout(()=>{
+        getDoc(doc(dbFs,"users",user.uid)).then(snap=>{
+          if(snap.exists()&&snap.data().plan){
+            window.location.href="/";
+          }
+        });
+      },4000);
+    }
+  },[user?.uid]);
   useEffect(()=>{
     if(user?.uid) {
       getDoc(doc(dbFs,"users",user.uid)).then(snap=>{
