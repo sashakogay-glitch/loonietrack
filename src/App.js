@@ -48,6 +48,7 @@ const CORP_CATS = [
   { id:"marketing",   label:"Marketing & Ads",        icon:"📢", color:"#D97706", deduct:100, hstClaimable:true,  note:"100% deductible" },
   { id:"professional",label:"Professional Fees",      icon:"👔", color:"#6366F1", deduct:100, hstClaimable:false, note:"Legal · Accounting" },
   { id:"office_sup",  label:"Office Supplies",        icon:"📎", color:"#84CC16", deduct:100, hstClaimable:true,  note:"100% deductible" },
+  { id:"materials",    label:"Materials & Supplies",  icon:"🔧", color:"#0891B2", deduct:100, hstClaimable:true,  note:"Raw materials · Production supplies" },
   { id:"other_biz",   label:"Other Business",         icon:"📌", color:"#9CA3AF", deduct:100, hstClaimable:true,  note:"" },
 ];
 const TAX_TAGS = [
