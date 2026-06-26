@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { auth, dbFs } from "./firebase";
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 
 // ─── Firebase auth error → friendly message ────────────────────────────────────
 function authErrorMsg(code) {
@@ -1112,9 +1112,9 @@ export default function App() {
   useEffect(()=>{
     const unsub = onAuthStateChanged(auth, (fbUser)=>{
       if(fbUser) {
-        getDoc(doc(dbFs,"users",fbUser.uid)).then(snap=>{
+        onSnapshot(doc(dbFs,"users",fbUser.uid),(snap)=>{
           const data = snap.exists() ? snap.data() : {};
-        setTxns(data.txns||[]);
+          setTxns(data.txns||[]);
           setUser({
             id: fbUser.uid,
             uid: fbUser.uid,
@@ -1122,15 +1122,6 @@ export default function App() {
             contact: fbUser.email,
             plan: data.plan || "free",
             txns: data.txns || [],
-          });
-          setState("app");
-        }).catch(()=>{
-          setUser({
-            id: fbUser.uid,
-            uid: fbUser.uid,
-            name: fbUser.displayName || (fbUser.email?fbUser.email.split("@")[0]:"User"),
-            contact: fbUser.email,
-            plan: "free",
           });
           setState("app");
         });
