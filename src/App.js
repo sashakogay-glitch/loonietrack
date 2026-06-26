@@ -571,6 +571,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
     if(user?.uid) {
       getDoc(doc(dbFs,"users",user.uid)).then(snap=>{
 const data = snap.exists() ? snap.data() : {};
+        setTxns(data.txns||[]);
 
         setRdy(true);      }).catch(()=>{ setTxns([]); setRdy(true); });
     } else {
@@ -1103,12 +1104,14 @@ export default function App() {
       if(fbUser) {
         getDoc(doc(dbFs,"users",fbUser.uid)).then(snap=>{
           const data = snap.exists() ? snap.data() : {};
+        setTxns(data.txns||[]);
           setUser({
             id: fbUser.uid,
             uid: fbUser.uid,
             name: fbUser.displayName || (fbUser.email?fbUser.email.split("@")[0]:"User"),
             contact: fbUser.email,
             plan: data.plan || "free",
+            txns: data.txns || [],
           });
           setState("app");
         }).catch(()=>{
