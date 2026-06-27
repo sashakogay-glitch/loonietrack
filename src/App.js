@@ -41,7 +41,8 @@ const PERSONAL_CATS = [
 ];
 const CORP_CATS = [
   { id:"meals",       label:"Meals & Entertainment", icon:"🍽️", color:"#E11D48", deduct:50,  hstClaimable:true,  note:"50% deductible" },
-  { id:"vehicle",     label:"Vehicle & Travel",      icon:"🚗", color:"#2563EB", deduct:100, hstClaimable:true,  note:"Mileage log required" },
+  { id:"vehicle",     label:"Auto",                  icon:"🚗", color:"#2563EB", deduct:100, hstClaimable:true,  note:"Lease · Gas · Insurance" },
+  { id:"travel",      label:"Travel",                icon:"✈️", color:"#0EA5E9", deduct:100, hstClaimable:true,  note:"Flights · Hotels · Parking" },
   { id:"equipment",   label:"Equipment & Software",  icon:"💻", color:"#7C3AED", deduct:100, hstClaimable:true,  note:"100% deductible" },
   { id:"phone_biz",   label:"Phone & Internet",      icon:"📱", color:"#0891B2", deduct:100, hstClaimable:true,  note:"Business % only" },
   { id:"home_office", label:"Home Office",            icon:"🏠", color:"#059669", deduct:100, hstClaimable:true,  note:"% of home space" },
@@ -704,7 +705,7 @@ const data = snap.exists() ? snap.data() : {};
             {!isPro&&<button className="btn" onClick={()=>{setShowP(false);setUpgrade("corp");}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#E84D0E",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>⭐ Upgrade to Pro</button>}
             {isGuest
               ? <button className="btn" onClick={()=>{setShowP(false);onGoAuth();}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#555",background:"none",borderRadius:8}}>📧 Sign Up / Sign In</button>
-              : <button className="btn" onClick={onSignOut} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#888",background:"none",borderRadius:8}}>🚪 Sign Out</button>
+              : <><a href="https://wa.me/14168549304" target="_blank" rel="noreferrer" style={{display:"block",width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#25D366",background:"none",borderRadius:8,textDecoration:"none"}}>💬 Support</a><button className="btn" onClick={onSignOut} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#888",background:"none",borderRadius:8}}>🚪 Sign Out</button></>
             }
           </div>
         </>
@@ -1068,7 +1069,7 @@ const data = snap.exists() ? snap.data() : {};
                     {item.total===0&&<div style={{fontSize:12,color:"#ccc",marginTop:6}}>No receipts tagged yet</div>}
                   </div>
                 ))}
-                <button className="btn" onClick={()=>{if(!isPro){setUpgrade("export");return;}const lines=[`PERSONAL TAX – ONTARIO ${yr}`,`Generated: ${new Date().toLocaleDateString("en-CA")}`,"=".repeat(50),"",`LINE 33099 MEDICAL: paid ${fmt(medTotal)}  threshold −${fmt(medThreshold)}  claimable ${fmt(medClaimable)}  credit ~${fmt(medClaimable*0.15)}`,`LINE 34900 DONATIONS: total ${fmt(donTotal)}  credit ${fmt(donCredit)}`,`LINE 21400 CHILDCARE: total ${fmt(chdTotal)}  CRA max $8,000/child`,"","─".repeat(50),"⚠️ Reference only. Consult CPA before filing."].join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([lines],{type:"text/plain"}));a.download=`personal-tax-${yr}.txt`;a.click();}} style={{width:"100%",padding:"15px",borderRadius:14,background:isPro?"linear-gradient(135deg,#E84D0E,#F97316)":"#ECEAE6",color:isPro?"#fff":"#aaa",fontSize:14,fontWeight:600,marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                <button className="btn" onClick={()=>{if(!isPro){setUpgrade("export");return;}const lines=[`PERSONAL TAX – ONTARIO ${yr}`,`Generated: ${new Date().toLocaleDateString("en-CA")}`,"=".repeat(50),"",`LINE 33099 MEDICAL: paid ${fmt(medTotal)}  threshold −${fmt(medThreshold)}  claimable ${fmt(medClaimable)}  credit ~${fmt(medClaimable*0.15)}`,`LINE 34900 DONATIONS: total ${fmt(donTotal)}  credit ${fmt(donCredit)}`,`LINE 21400 CHILDCARE: total ${fmt(chdTotal)}  CRA max $8,000/child`,"","─".repeat(50),"⚠️ Reference only. Consult CPA before filing."].join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([lines],{type:"text/plain"}));a.download=`personal-tax-${yr}.txt`;a.click(); alert("✅ Report downloaded!");}} style={{width:"100%",padding:"15px",borderRadius:14,background:isPro?"linear-gradient(135deg,#E84D0E,#F97316)":"#ECEAE6",color:isPro?"#fff":"#aaa",fontSize:14,fontWeight:600,marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                   {!isPro&&"🔒 "}{isPro?"⬇ Export T1 Report":"Export T1 — Pro only"}
                 </button>
               </>
@@ -1088,7 +1089,7 @@ const data = snap.exists() ? snap.data() : {};
                     {qData.map((q,i)=><div key={i} style={{background:q.hst>0?"#EEF2FF":"#F8F7F4",borderRadius:10,padding:"12px"}}><div style={{fontSize:10,fontWeight:700,color:q.hst>0?"#4338CA":"#bbb",marginBottom:4}}>{q.label}</div><div style={{fontSize:14,fontWeight:600,color:q.hst>0?"#111":"#ccc"}}>{fmt(q.hst)}</div></div>)}
                   </div>
                 </div>
-                <button className="btn" onClick={()=>{const lines=[`CORP T2 – ONTARIO ${yr}`,`Generated: ${new Date().toLocaleDateString("en-CA")}`,"=".repeat(50),"",`GROSS: ${fmt(corpGrossTotal)}  DEDUCTIBLE: ${fmt(corpDeductTotal)}  HST ITC: ${fmt(corpHSTTotal)}`,"","QUARTERLY HST:",...qData.map(q=>`  ${q.label}: ${fmt(q.hst)}`),"","─".repeat(50),...corpBycat.map(c=>`${c.icon} ${c.label}: ${fmt(c.gross)} gross  ${fmt(c.deductible)} deduct.  ${fmt(c.hst)} HST ITC`),"","⚠️ Reference only. Have accountant review before T2 filing."].join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([lines],{type:"text/plain"}));a.download=`corp-t2-${yr}.txt`;a.click();}} style={{width:"100%",padding:"15px",borderRadius:14,background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:14,fontWeight:600,marginBottom:12}}>
+                <button className="btn" onClick={()=>{const lines=[`CORP T2 – ONTARIO ${yr}`,`Generated: ${new Date().toLocaleDateString("en-CA")}`,"=".repeat(50),"",`GROSS: ${fmt(corpGrossTotal)}  DEDUCTIBLE: ${fmt(corpDeductTotal)}  HST ITC: ${fmt(corpHSTTotal)}`,"","QUARTERLY HST:",...qData.map(q=>`  ${q.label}: ${fmt(q.hst)}`),"","─".repeat(50),...corpBycat.map(c=>`${c.icon} ${c.label}: ${fmt(c.gross)} gross  ${fmt(c.deductible)} deduct.  ${fmt(c.hst)} HST ITC`),"","⚠️ Reference only. Have accountant review before T2 filing."].join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([lines],{type:"text/plain"}));a.download=`corp-t2-${yr}.txt`;a.click(); alert("✅ Report downloaded!");}} style={{width:"100%",padding:"15px",borderRadius:14,background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:14,fontWeight:600,marginBottom:12}}>
                   ⬇ Export Corp T2 Report
                 </button>
               </>
