@@ -1141,7 +1141,6 @@ export default function App() {
             name: fbUser.displayName || (fbUser.email?fbUser.email.split("@")[0]:"User"),
             contact: fbUser.email,
             plan: data.plan || "free",
-            txns: data.txns || [],
           }));
           setState("app");
         });
