@@ -596,7 +596,7 @@ const data = snap.exists() ? snap.data() : {};
   const commit = async (l) => {
     setTxns(l);
     if(user?.uid) {
-      try { const lNoImg = l.map(({img,...rest})=>rest); await setDoc(doc(dbFs,"users",user.uid), { txns: lNoImg }, { merge: true }); } catch(e) { console.error("Firestore save failed:", e); }
+      try { const lSafe = l.map(({img,...rest})=>img&&img.startsWith("https")?{...rest,img}:rest); await setDoc(doc(dbFs,"users",user.uid), { txns: lSafe }, { merge: true }); } catch(e) { console.error("Firestore save failed:", e); }
     } else {
       await db.set("ft5_txns",l);
     }
