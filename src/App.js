@@ -595,7 +595,7 @@ const data = snap.exists() ? snap.data() : {};
   const commit = async (l) => {
     setTxns(l);
     if(user?.uid) {
-      try { await setDoc(doc(dbFs,"users",user.uid), { txns: l }, { merge: true }); } catch(e) { console.error("Firestore save failed:", e); }
+      console.log("Saving to Firestore, uid:", user?.uid); try { await setDoc(doc(dbFs,"users",user.uid), { txns: l }, { merge: true }); } catch(e) { console.error("Firestore save failed:", e); }
     } else {
       await db.set("ft5_txns",l);
     }
