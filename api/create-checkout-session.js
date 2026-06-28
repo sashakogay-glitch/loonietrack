@@ -2,8 +2,8 @@ const Stripe = require("stripe");
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 const PRICES = {
-  personal: "price_1TjScOB9AP57Tw0HZ19oxRzy",
-  business: "price_1TjSfhB9AP57Tw0H13vLpuUN"
+  personal: "price_1TnNf7BSXJwCfBy36QSqdUsm",
+  business: "price_1TnNf6BSXJwCfBy3Woca1sCv"
 };
 
 module.exports = async function handler(req, res) {
