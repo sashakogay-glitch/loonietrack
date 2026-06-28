@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recha
 import { auth, dbFs } from "./firebase";
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 // ─── Firebase auth error → friendly message ────────────────────────────────────
 function authErrorMsg(code) {
@@ -605,7 +606,22 @@ const data = snap.exists() ? snap.data() : {};
 
   const addTxn = async (d) => {
     if(!isPro && monthUsed>=FREE_LIMIT){ setUpgrade("limit"); return; }
-    const t={id:gid(),at:new Date().toISOString(),...d};
+    let imgUrl = null;
+    if(d.img && user?.uid) {
+      try {
+        const storage = getStorage();
+        const txnId = gid();
+        const storageRef = ref(storage, `receipts/${user.uid}/${txnId}`);
+        const blob = await fetch(d.img).then(r=>r.blob());
+        await uploadBytes(storageRef, blob);
+        imgUrl = await getDownloadURL(storageRef);
+        const t={id:txnId,at:new Date().toISOString(),...d,img:imgUrl};
+        const next=[t,...txns]; await commit(next);
+        setUndo(t); clearTimeout(undoT.current); undoT.current=setTimeout(()=>setUndo(null),5000);
+        return;
+      } catch(e) { console.error("Storage upload failed:", e); }
+    }
+    const t={id:gid(),at:new Date().toISOString(),...d,img:imgUrl};
     const next=[t,...txns]; await commit(next);
     setUndo(t); clearTimeout(undoT.current); undoT.current=setTimeout(()=>setUndo(null),5000);
   };
