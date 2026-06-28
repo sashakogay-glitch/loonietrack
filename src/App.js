@@ -33,7 +33,7 @@ const LoonieIcon = ({ size = 24 }) => (
 const PERSONAL_CATS = [
   { id:"grocery",  label:"Grocery",       icon:"🛒", color:"#16A34A" },
   { id:"gas",      label:"Gas",           icon:"⛽", color:"#D97706" },
-  { id:"food_out", label:"Lifestyle", icon:"🎬", color:"#F97316" },
+  { id:"food_out", label:"Lifestyle", icon:"🏌️", color:"#F97316" },
   { id:"car",      label:"Car",           icon:"🚗", color:"#2563EB", sub:"Lease · Insurance" },
   { id:"phone",    label:"Phone",         icon:"📱", color:"#0891B2", sub:"Rogers · Bell · Telus" },
   { id:"house",    label:"House",         icon:"🏠", color:"#7C3AED", sub:"Rent · Utilities · Hydro" },
