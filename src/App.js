@@ -1031,9 +1031,7 @@ const data = snap.exists() ? snap.data() : {};
                 <div style={{background:"#fff",borderRadius:18,overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
                   {dayTxns.map((t,i)=>{const c=anyCat(t.category,t.type);const isCorp=t.type==="corp";return(
                     <div key={t.id} onClick={()=>t.img&&setViewImg(t.img)} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 14px",borderBottom:i<dayTxns.length-1?"1px solid #F3F3F1":"none",cursor:t.img?"pointer":"default"}}>
-                      {t.img
-                        ? <img src={t.img} alt="" style={{width:42,height:42,borderRadius:13,objectFit:"cover",flexShrink:0,border:"1px solid #F0EFEC"}}/>
-                        : <div style={{width:42,height:42,borderRadius:13,background:`${c.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{c.icon}</div>}
+                      <div style={{width:42,height:42,borderRadius:13,background:`${c.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{c.icon}</div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
                           <div style={{fontSize:14,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.merchant||c.label}</div>
