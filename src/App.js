@@ -4,6 +4,7 @@ import { auth, dbFs } from "./firebase";
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import jsPDF from "jspdf";
 
 // ─── Firebase auth error → friendly message ────────────────────────────────────
 function authErrorMsg(code) {
@@ -686,6 +687,110 @@ const data = snap.exists() ? snap.data() : {};
   const bar6=Array.from({length:6},(_,i)=>{const d=new Date();d.setMonth(d.getMonth()-(5-i));const m=d.getMonth(),y=d.getFullYear();return {month:d.toLocaleDateString("en-CA",{month:"short"}),total:txns.filter(t=>{const td=parseDate(t.date||t.at);return td.getMonth()===m&&td.getFullYear()===y;}).reduce((s,t)=>s+(t.amount||0),0)};});
   const groups=(()=>{const g={};txns.slice(0,40).forEach(t=>{const k=fmtD(t.date||t.at);(g[k]=g[k]||[]).push(t);});return Object.entries(g).slice(0,7);})();
 
+  // ── PDF export helpers ────────────────────────────────────────────────────
+  const exportPersonalPDF = () => {
+    const pdf = new jsPDF();
+    const marginX = 14;
+    let y = 20;
+
+    pdf.setFontSize(16); pdf.setFont(undefined,"bold");
+    pdf.text(`Personal Tax Report - Ontario ${yr}`, marginX, y); y += 7;
+    pdf.setFontSize(10); pdf.setFont(undefined,"normal"); pdf.setTextColor(130);
+    pdf.text(`Generated: ${new Date().toLocaleDateString("en-CA")}`, marginX, y); y += 8;
+    pdf.setDrawColor(220); pdf.line(marginX, y, 196, y); y += 10;
+    pdf.setTextColor(0);
+
+    const section = (title, line, rows) => {
+      pdf.setFontSize(12); pdf.setFont(undefined,"bold");
+      pdf.text(title, marginX, y); y += 6;
+      pdf.setFontSize(9); pdf.setTextColor(232,77,14); pdf.setFont(undefined,"bold");
+      pdf.text(line, marginX, y); y += 7;
+      pdf.setTextColor(0); pdf.setFont(undefined,"normal"); pdf.setFontSize(10);
+      rows.forEach(([label,value])=>{
+        pdf.text(label, marginX+2, y);
+        pdf.text(value, 196, y, {align:"right"});
+        y += 6;
+      });
+      y += 6;
+    };
+
+    section("Medical Expenses", "Line 33099", [
+      ["Total paid", fmt(medTotal)],
+      ["3% threshold", `-${fmt(medThreshold)}`],
+      ["Claimable amount", fmt(medClaimable)],
+      ["Est. credit (~15%)", fmt(medClaimable*0.15)],
+    ]);
+
+    section("Donations", "Line 34900", [
+      ["Total donated", fmt(donTotal)],
+      ["Tax credit", fmt(donCredit)],
+    ]);
+
+    section("Childcare", "Line 21400 - T778", [
+      ["Total paid", fmt(chdTotal)],
+      ["CRA max per child", "$8,000"],
+    ]);
+
+    pdf.setDrawColor(220); pdf.line(marginX, y, 196, y); y += 8;
+    pdf.setFontSize(9); pdf.setTextColor(185,74,26);
+    pdf.text("Reference only. Consult a CPA before filing with CRA.", marginX, y);
+
+    pdf.save(`personal-tax-${yr}.pdf`);
+    setDlToast(true); setTimeout(()=>setDlToast(false),2000);
+  };
+
+  const exportCorpPDF = () => {
+    const pdf = new jsPDF();
+    const marginX = 14;
+    let y = 20;
+    const pageBottom = 280;
+    const checkPage = () => { if(y > pageBottom) { pdf.addPage(); y = 20; } };
+
+    pdf.setFontSize(16); pdf.setFont(undefined,"bold");
+    pdf.text(`Corporation T2 Report - Ontario ${yr}`, marginX, y); y += 7;
+    pdf.setFontSize(10); pdf.setFont(undefined,"normal"); pdf.setTextColor(130);
+    pdf.text(`Generated: ${new Date().toLocaleDateString("en-CA")}`, marginX, y); y += 8;
+    pdf.setDrawColor(220); pdf.line(marginX, y, 196, y); y += 10;
+    pdf.setTextColor(0);
+
+    pdf.setFontSize(11); pdf.setFont(undefined,"bold");
+    pdf.text(`Gross: ${fmt(corpGrossTotal)}`, marginX, y);
+    pdf.text(`Deductible: ${fmt(corpDeductTotal)}`, 105, y); y += 7;
+    pdf.text(`HST ITC: ${fmt(corpHSTTotal)}`, marginX, y); y += 10;
+    pdf.setFont(undefined,"normal");
+
+    pdf.setFontSize(11); pdf.setFont(undefined,"bold");
+    pdf.text("Quarterly HST Return", marginX, y); y += 7;
+    pdf.setFont(undefined,"normal"); pdf.setFontSize(10);
+    qData.forEach(q=>{
+      pdf.text(q.label, marginX+2, y);
+      pdf.text(fmt(q.hst), 196, y, {align:"right"});
+      y += 6;
+      checkPage();
+    });
+    y += 6;
+
+    pdf.setFontSize(11); pdf.setFont(undefined,"bold");
+    pdf.text("By Category", marginX, y); y += 7;
+    pdf.setFont(undefined,"normal"); pdf.setFontSize(9.5);
+    corpBycat.forEach(c=>{
+      pdf.text(c.label, marginX+2, y);
+      pdf.text(`${fmt(c.gross)} gross`, 100, y);
+      pdf.text(`${fmt(c.deductible)} deduct.`, 145, y);
+      pdf.text(fmt(c.hst), 196, y, {align:"right"});
+      y += 6;
+      checkPage();
+    });
+
+    y += 8; checkPage();
+    pdf.setDrawColor(220); pdf.line(marginX, y, 196, y); y += 8; checkPage();
+    pdf.setFontSize(9); pdf.setTextColor(185,74,26);
+    pdf.text("Reference only. Have an accountant review before T2 filing.", marginX, y);
+
+    pdf.save(`corp-t2-${yr}.pdf`);
+    setDlToast(true); setTimeout(()=>setDlToast(false),2000);
+  };
+
   const planColor = isPro?(hasCorp?"#4F46E5":"#E84D0E"):"#9CA3AF";
   const planLabel = isPro?(hasCorp?"Business":"Personal"):(isGuest?"Guest":"Free");
 
@@ -1087,7 +1192,7 @@ const data = snap.exists() ? snap.data() : {};
                     {item.total===0&&<div style={{fontSize:12,color:"#ccc",marginTop:6}}>No receipts tagged yet</div>}
                   </div>
                 ))}
-                <button className="btn" onClick={()=>{if(!isPro){setUpgrade("export");return;}const lines=[`PERSONAL TAX – ONTARIO ${yr}`,`Generated: ${new Date().toLocaleDateString("en-CA")}`,"=".repeat(50),"",`LINE 33099 MEDICAL: paid ${fmt(medTotal)}  threshold −${fmt(medThreshold)}  claimable ${fmt(medClaimable)}  credit ~${fmt(medClaimable*0.15)}`,`LINE 34900 DONATIONS: total ${fmt(donTotal)}  credit ${fmt(donCredit)}`,`LINE 21400 CHILDCARE: total ${fmt(chdTotal)}  CRA max $8,000/child`,"","─".repeat(50),"⚠️ Reference only. Consult CPA before filing."].join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([lines],{type:"text/plain"}));a.download=`personal-tax-${yr}.txt`;a.click(); setDlToast(true); setTimeout(()=>setDlToast(false),2000);}} style={{width:"100%",padding:"15px",borderRadius:14,background:isPro?"linear-gradient(135deg,#E84D0E,#F97316)":"#ECEAE6",color:isPro?"#fff":"#aaa",fontSize:14,fontWeight:600,marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                <button className="btn" onClick={()=>{if(!isPro){setUpgrade("export");return;}exportPersonalPDF();}} style={{width:"100%",padding:"15px",borderRadius:14,background:isPro?"linear-gradient(135deg,#E84D0E,#F97316)":"#ECEAE6",color:isPro?"#fff":"#aaa",fontSize:14,fontWeight:600,marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                   {!isPro&&"🔒 "}{isPro?"⬇ Export T1 Report":"Export T1 — Pro only"}
                 </button>
               </>
@@ -1107,7 +1212,7 @@ const data = snap.exists() ? snap.data() : {};
                     {qData.map((q,i)=><div key={i} style={{background:q.hst>0?"#EEF2FF":"#F8F7F4",borderRadius:10,padding:"12px"}}><div style={{fontSize:10,fontWeight:700,color:q.hst>0?"#4338CA":"#bbb",marginBottom:4}}>{q.label}</div><div style={{fontSize:14,fontWeight:600,color:q.hst>0?"#111":"#ccc"}}>{fmt(q.hst)}</div></div>)}
                   </div>
                 </div>
-                <button className="btn" onClick={()=>{const lines=[`CORP T2 – ONTARIO ${yr}`,`Generated: ${new Date().toLocaleDateString("en-CA")}`,"=".repeat(50),"",`GROSS: ${fmt(corpGrossTotal)}  DEDUCTIBLE: ${fmt(corpDeductTotal)}  HST ITC: ${fmt(corpHSTTotal)}`,"","QUARTERLY HST:",...qData.map(q=>`  ${q.label}: ${fmt(q.hst)}`),"","─".repeat(50),...corpBycat.map(c=>`${c.icon} ${c.label}: ${fmt(c.gross)} gross  ${fmt(c.deductible)} deduct.  ${fmt(c.hst)} HST ITC`),"","⚠️ Reference only. Have accountant review before T2 filing."].join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([lines],{type:"text/plain"}));a.download=`corp-t2-${yr}.txt`;a.click(); setDlToast(true); setTimeout(()=>setDlToast(false),2000);}} style={{width:"100%",padding:"15px",borderRadius:14,background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:14,fontWeight:600,marginBottom:12}}>
+                <button className="btn" onClick={exportCorpPDF} style={{width:"100%",padding:"15px",borderRadius:14,background:"linear-gradient(135deg,#4F46E5,#7C3AED)",color:"#fff",fontSize:14,fontWeight:600,marginBottom:12}}>
                   ⬇ Export Corp T2 Report
                 </button>
               </>
