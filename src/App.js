@@ -247,8 +247,8 @@ function AuthScreen({ onGuest, onAuth }) {
         <button className="btn" onClick={()=>setMode("signin")} style={{width:"100%",padding:"16px",borderRadius:16,background:"#fff",border:"1.5px solid #E5E4E0",color:"#111",fontSize:14,fontWeight:600,boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
           Sign In
         </button>
-        <button className="btn" onClick={onGuest} style={{width:"100%",padding:"14px",borderRadius:14,background:"none",color:"#aaa",fontSize:13,fontWeight:600}}>
-          Continue as Guest — {FREE_LIMIT} receipts/month
+        <button className="btn" onClick={()=>setMode("signup")} style={{width:"100%",padding:"14px",borderRadius:14,background:"none",color:"#aaa",fontSize:13,fontWeight:600}}>
+          Try free — {FREE_LIMIT} receipts/month
         </button>
       </div>
     </div>
