@@ -1,0 +1,31 @@
+{
+  "short_name": "LoonieTrack",
+  "name": "LoonieTrack - Expense & Tax Tracker",
+  "description": "Scan receipts, track expenses, and generate Canadian tax reports.",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512-maskable.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "/",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#F5F4F0",
+  "background_color": "#F5F4F0"
+}
