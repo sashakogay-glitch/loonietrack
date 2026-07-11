@@ -21,6 +21,16 @@
     <meta name="mobile-web-app-capable" content="yes" />
 
     <title>LoonieTrack</title>
+
+    <!-- Capture the install prompt as early as possible, before React even loads,
+         so we never miss the one-time event and the in-app Install button always works. -->
+    <script>
+      window.__deferredInstallPrompt = null;
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        window.__deferredInstallPrompt = e;
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

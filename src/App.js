@@ -575,9 +575,12 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   const undoT = useRef();
 
   useEffect(()=>{
-    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
+    if(window.__deferredInstallPrompt) setInstallPrompt(window.__deferredInstallPrompt);
+    const handler = (e) => { e.preventDefault(); window.__deferredInstallPrompt = e; setInstallPrompt(e); };
     window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    const onInstalled = () => { window.__deferredInstallPrompt = null; setInstallPrompt(null); };
+    window.addEventListener("appinstalled", onInstalled);
+    return () => { window.removeEventListener("beforeinstallprompt", handler); window.removeEventListener("appinstalled", onInstalled); };
   },[]);
 
   const isIos = () => /iphone|ipad|ipod/i.test(window.navigator.userAgent);
@@ -588,6 +591,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
     if(installPrompt) {
       installPrompt.prompt();
       const { outcome } = await installPrompt.userChoice;
+      window.__deferredInstallPrompt = null;
       if(outcome==="accepted") setInstallPrompt(null);
       return;
     }
