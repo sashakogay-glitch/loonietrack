@@ -570,7 +570,31 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   const [pendFile,setPendF] = useState(null);
   const [upgrade, setUpgrade]=useState(null);
   const [showProf,setShowP] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [showIosInstall, setShowIosInstall] = useState(false);
   const undoT = useRef();
+
+  useEffect(()=>{
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  },[]);
+
+  const isIos = () => /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+  const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone===true;
+
+  const handleInstallClick = async () => {
+    setShowP(false);
+    if(installPrompt) {
+      installPrompt.prompt();
+      const { outcome } = await installPrompt.userChoice;
+      if(outcome==="accepted") setInstallPrompt(null);
+      return;
+    }
+    if(isIos()) { setShowIosInstall(true); return; }
+    setShowIosInstall(true); // fallback generic instructions for unsupported browsers
+  };
+
 useEffect(()=>{
     if(window.location.search.includes("upgrade=success")&&user?.uid){
       setTimeout(()=>{
@@ -824,6 +848,7 @@ const data = snap.exists() ? snap.data() : {};
               <div style={{fontSize:12,color:"#aaa",marginTop:2}}>{isGuest?"No account":user.contact}</div>
               <div style={{marginTop:8,display:"inline-flex",padding:"3px 10px",borderRadius:100,background:isPro?"linear-gradient(135deg,#E84D0E,#F97316)":"#F3F3F1",color:isPro?"#fff":"#888",fontSize:11,fontWeight:700}}>{planLabel} Plan{isPro?"":" · "+monthUsed+"/"+FREE_LIMIT+" used"}</div>
             </div>
+            {!isStandalone()&&<button className="btn" onClick={handleInstallClick} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#111",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>📲 Install App</button>}
             {!isPro&&<button className="btn" onClick={()=>{setShowP(false);setUpgrade("corp");}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#E84D0E",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>⭐ Upgrade to Pro</button>}
             {isGuest
               ? <button className="btn" onClick={()=>{setShowP(false);onGoAuth();}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#555",background:"none",borderRadius:8}}>📧 Sign Up / Sign In</button>
@@ -989,6 +1014,58 @@ const data = snap.exists() ? snap.data() : {};
     else{alert("Checkout error: "+(data.error||"unknown error"));}
   }catch(e){alert("Network error: "+e.message);}
 }}/>}
+
+      {showIosInstall&&(
+        <div style={{position:"fixed",inset:0,zIndex:400}}>
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.55)",backdropFilter:"blur(10px)"}} onClick={()=>setShowIosInstall(false)}/>
+          <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#F5F4F0",borderRadius:"24px 24px 0 0",padding:"28px 20px 44px",animation:"sheet .25s ease",maxWidth:430,margin:"0 auto"}}>
+            <div style={{textAlign:"center",marginBottom:24}}>
+              <div style={{fontSize:44,marginBottom:10}}>📲</div>
+              <div style={{fontSize:17,fontWeight:600,marginBottom:6}}>Install LoonieTrack</div>
+              <div style={{fontSize:13,color:"#888",lineHeight:1.6}}>
+                {isIos() ? "Add this app to your Home Screen from Safari:" : "Add this app to your Home Screen:"}
+              </div>
+            </div>
+            {isIos() ? (
+              <div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:20}}>
+                {[
+                  {n:1,t:"Open this site in Safari",s:"(not Chrome — Apple only allows this from Safari)"},
+                  {n:2,t:"Tap the Share icon", s:"the square with an arrow pointing up, in the bottom toolbar"},
+                  {n:3,t:"Scroll down and tap \"Add to Home Screen\"", s:""},
+                  {n:4,t:"Tap \"Add\" in the top right", s:""},
+                ].map(step=>(
+                  <div key={step.n} style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+                    <div style={{width:32,height:32,borderRadius:"50%",background:"#111",color:"#fff",fontWeight:700,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{step.n}</div>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:600}}>{step.t}</div>
+                      {step.s&&<div style={{fontSize:12,color:"#aaa",marginTop:2}}>{step.s}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:14,marginBottom:20}}>
+                {[
+                  {n:1,t:"Tap the menu (⋮) in your browser", s:"usually top-right corner"},
+                  {n:2,t:"Tap \"Add to Home screen\" or \"Install app\"", s:""},
+                  {n:3,t:"Confirm — the icon will appear on your home screen", s:""},
+                ].map(step=>(
+                  <div key={step.n} style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+                    <div style={{width:32,height:32,borderRadius:"50%",background:"#111",color:"#fff",fontWeight:700,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{step.n}</div>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:600}}>{step.t}</div>
+                      {step.s&&<div style={{fontSize:12,color:"#aaa",marginTop:2}}>{step.s}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button className="btn" onClick={()=>setShowIosInstall(false)} style={{width:"100%",padding:"14px",borderRadius:14,background:"linear-gradient(135deg,#E84D0E,#F97316)",color:"#fff",fontSize:14,fontWeight:600}}>
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
 
       {undo&&(
         <div style={{position:"fixed",bottom:24,left:12,right:12,zIndex:150,background:"#111",color:"#fff",borderRadius:16,padding:"13px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 6px 28px rgba(0,0,0,.25)",animation:"up .25s ease"}}>
