@@ -1,6 +1,6 @@
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({error:"Method not allowed"});
-  const key = process.env.REACT_APP_ANTHROPIC_KEY || "";
+  const key = process.env.ANTHROPIC_KEY || "";
   const { b64, mime, type } = req.body || {};
   if(!b64) return res.status(400).json({error:"No image data"});
   if(!key) return res.status(400).json({error:"API key missing"});
