@@ -1,5 +1,24 @@
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({error:"Method not allowed"});
+
+  // ── Verify the request comes from a real signed-in user ──────────────────
+  const authHeader = req.headers.authorization || "";
+  const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if(!idToken) return res.status(401).json({error:"Unauthorized - please sign in"});
+
+  try {
+    const verifyRes = await fetch(
+      "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyD1eDVer4cG0yRT8oVBjTZZqyq9GRX7GfU",
+      { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ idToken }) }
+    );
+    const verifyData = await verifyRes.json();
+    if(verifyData.error || !verifyData.users || !verifyData.users[0]) {
+      return res.status(401).json({error:"Unauthorized - invalid session, please sign in again"});
+    }
+  } catch(e) {
+    return res.status(401).json({error:"Unauthorized - could not verify session"});
+  }
+
   const key = process.env.ANTHROPIC_API_KEY || "";
   const { b64, mime, type } = req.body || {};
   if(!b64) return res.status(400).json({error:"No image data"});

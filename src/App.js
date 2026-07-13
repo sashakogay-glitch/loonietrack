@@ -99,6 +99,8 @@ const rangeOf = (p,cu) => {
 // ─── Claude API ────────────────────────────────────────────────────────────────
 async function aiScan(b64,mime,type) {
   if(!b64 || b64.length < 50) throw new Error("No image captured");
+  if(!auth.currentUser) throw new Error("Please sign in to scan receipts");
+  const idToken = await auth.currentUser.getIdToken();
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     const timer = setTimeout(() => {
@@ -107,6 +109,7 @@ async function aiScan(b64,mime,type) {
     }, 20000);
     xhr.open("POST", "/api/scan", true);
     xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.setRequestHeader("Authorization", "Bearer " + idToken);
     xhr.onreadystatechange = function() {
       if(xhr.readyState !== 4) return;
       clearTimeout(timer);
