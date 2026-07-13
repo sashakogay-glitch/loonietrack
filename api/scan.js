@@ -8,7 +8,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const verifyRes = await fetch(
-      "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyD1eDVer4cG0yRT8oVBjTZZqyq9GRX7GfU",
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${process.env.FIREBASE_SERVER_KEY}`,
       { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ idToken }) }
     );
     const verifyData = await verifyRes.json();
