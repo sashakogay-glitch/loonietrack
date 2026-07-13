@@ -635,6 +635,7 @@ const data = snap.exists() ? snap.data() : {};
 
   const addTxn = async (d) => {
     if(!isPro && monthUsed>=FREE_LIMIT){ setUpgrade("limit"); return; }
+    d = { ...d, amount: d.amount==null||isNaN(d.amount)?0:d.amount, hst: d.hst==null||isNaN(d.hst)?0:d.hst };
     let imgUrl = null;
     if(d.img && user?.uid) {
       try {
@@ -683,7 +684,7 @@ const data = snap.exists() ? snap.data() : {};
       const r=await aiScan(pendFile.b64,pendFile.mime,type);
       if((r.confidence||0)>=CONF){ await addTxn({merchant:r.merchant||"Receipt",amount:r.amount,hst:r.hst,date:r.date||new Date().toISOString().slice(0,10),category:r.category||(type==="corp"?"other_biz":"other"),taxTag:r.taxTag||"none",type,img}); setPrev(null); }
       else { setPend({data:r,sugCat:r.category||(type==="corp"?"other_biz":"other"),type,img}); }
-    } catch(err) { setPend({data:{merchant:"",amount:null},sugCat:type==="corp"?"other_biz":"other",type,err:String(err),img}); }
+    } catch(err) { console.error("Receipt scan failed:", err); setPend({data:{merchant:"",amount:null},sugCat:type==="corp"?"other_biz":"other",type,err:String(err),img}); }
     finally { setScan(false); setPendF(null); }
   };
 
@@ -910,7 +911,7 @@ const data = snap.exists() ? snap.data() : {};
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)",animation:"fadeIn .2s"}} onClick={()=>{setPend(null);setPrev(null);}}/>
           <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#F5F4F0",borderRadius:"24px 24px 0 0",padding:"28px 20px 44px",maxHeight:"86vh",overflowY:"auto",animation:"sheet .25s ease"}}>
             <div style={{display:"inline-flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:100,marginBottom:14,background:pending.type==="corp"?"#EEF2FF":"#FFF3EE",fontSize:12,fontWeight:700,color:pending.type==="corp"?"#4338CA":"#B94A1A"}}>{pending.type==="corp"?"💼 Corporation":"👤 Personal"}</div>
-            {pending.err&&<div style={{background:"#FFF3EE",border:"1.5px solid #FFD5C2",borderRadius:10,padding:"10px 12px",marginBottom:12,fontSize:11,color:"#B94A1A",wordBreak:"break-all"}}>⚠️ Debug: {pending.err}</div>}
+            {pending.err&&<div style={{background:"#FFF3EE",border:"1.5px solid #FFD5C2",borderRadius:10,padding:"10px 12px",marginBottom:12,fontSize:12,color:"#B94A1A"}}>⚠️ Couldn't read this receipt automatically — no problem, just pick a category and enter the details below.</div>}
             <div style={{fontSize:17,fontWeight:600,marginBottom:4}}>What was this for?</div>
             <div style={{fontSize:13,color:"#888",marginBottom:20}}>{pending.data?.merchant?`${pending.data.merchant}${pending.data.amount?` · ${fmt(pending.data.amount)}`:""}`:"Pick a category"}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
