@@ -31,6 +31,16 @@ const LoonieIcon = ({ size = 24 }) => (
   />
 );
 
+// ─── Canada flag — inline SVG so it renders reliably everywhere (some Windows/Chrome combos show the 🇨🇦 emoji as plain "CA" text) ───
+const CanadaFlag = ({ size = 14 }) => (
+  <svg width={size} height={size*2/3} viewBox="0 0 30 20" style={{display:"inline-block",flexShrink:0,verticalAlign:"-1px"}} aria-label="Canada">
+    <rect width="30" height="20" fill="#fff"/>
+    <rect width="7.5" height="20" fill="#E84D0E"/>
+    <rect x="22.5" width="7.5" height="20" fill="#E84D0E"/>
+    <path d="M15 4 L16 7.5 L19 6.5 L17.5 10 L20.5 10.5 L17.5 12.5 L18.5 15.5 L15 14 L11.5 15.5 L12.5 12.5 L9.5 10.5 L12.5 10 L11 6.5 L14 7.5 Z" fill="#E84D0E"/>
+  </svg>
+);
+
 
 const PERSONAL_CATS = [
   { id:"grocery",  label:"Grocery",       icon:"🛒", color:"#16A34A" },
@@ -69,8 +79,22 @@ const SOLE_TAX_RATES = {
   AB: {30000:17, 60000:24, 100000:29, 150000:33},
   BC: {30000:17, 60000:24, 100000:29, 150000:34},
   QC: {30000:20, 60000:28, 100000:34, 150000:39},
+  SK: {30000:18, 60000:25, 100000:29, 150000:33},
+  MB: {30000:19, 60000:26, 100000:31, 150000:36},
+  NB: {30000:18, 60000:25, 100000:30, 150000:34},
+  NS: {30000:20, 60000:28, 100000:34, 150000:40},
+  PE: {30000:19, 60000:26, 100000:31, 150000:36},
+  NL: {30000:19, 60000:27, 100000:33, 150000:38},
+  YT: {30000:16, 60000:22, 100000:27, 150000:31},
+  NT: {30000:17, 60000:23, 100000:28, 150000:32},
+  NU: {30000:15, 60000:21, 100000:26, 150000:30},
 };
-const INC_TAX_RATES = { ON:12.2, AB:11.0, BC:11.0, QC:12.2 };
+const INC_TAX_RATES = { ON:12.2, AB:11.0, BC:11.0, QC:12.2, SK:10.0, MB:9.0, NB:11.5, NS:11.5, PE:10.0, NL:12.0, YT:9.0, NT:11.0, NU:12.0 };
+const PROVINCE_NAMES = {
+  ON:"Ontario", AB:"Alberta", BC:"British Columbia", QC:"Quebec", SK:"Saskatchewan",
+  MB:"Manitoba", NB:"New Brunswick", NS:"Nova Scotia", PE:"Prince Edward Island",
+  NL:"Newfoundland and Labrador", YT:"Yukon", NT:"Northwest Territories", NU:"Nunavut",
+};
 const GAUGE_INCOME_LABELS = { 30000:"$30K", 60000:"$60K", 100000:"$100K", 150000:"$150K+" };
 const GAUGE_ARC_LEN = 214;
 const PLANS = {
@@ -220,7 +244,7 @@ function AuthScreen({ onGuest, onAuth }) {
       <div style={{width:"100%",background:"rgba(245,244,240,.96)",backdropFilter:"blur(22px)",borderBottom:"1px solid #E8E7E3",padding:"14px 20px",display:"flex",alignItems:"center",gap:8}}>
         <LoonieIcon size={26}/>
         <span style={{fontSize:16,fontWeight:600,letterSpacing:"-.3px"}}>LoonieTrack</span>
-        <span style={{fontSize:10,color:"#aaa",marginTop:2}}>🍁 Canada · Ontario</span>
+        <span style={{fontSize:10,color:"#aaa",marginTop:2,display:"inline-flex",alignItems:"center",gap:4}}><CanadaFlag size={13}/> Canada</span>
       </div>
 
       <div style={{flex:1,width:"100%",padding:"48px 20px 40px",display:"flex",flexDirection:"column",background:"linear-gradient(180deg,#FAFAF8 0%,#F0EFEA 100%)",position:"relative",overflow:"hidden"}}>
@@ -232,8 +256,8 @@ function AuthScreen({ onGuest, onAuth }) {
   {mode==="choice"&&(
     <div style={{animation:"fadeUp .4s ease",display:"flex",flexDirection:"column",flex:1}}>
       <div style={{marginBottom:20}}>
-        <div style={{fontSize:11,fontWeight:700,color:"#E84D0E",letterSpacing:".08em",marginBottom:10}}>
-          🇨🇦 BUILT IN CANADA — FOR THE SELF-EMPLOYED
+        <div style={{fontSize:11,fontWeight:700,color:"#E84D0E",letterSpacing:".08em",marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+          <CanadaFlag size={15}/> BUILT IN CANADA — FOR THE SELF-EMPLOYED
         </div>
         <div style={{fontSize:"clamp(28px, 8.5vw, 37px)",fontWeight:700,letterSpacing:'-.5px',marginBottom:8}}>
   <div style={{textAlign:"left"}}>Know what you owe.</div>
@@ -248,10 +272,9 @@ function AuthScreen({ onGuest, onAuth }) {
       <div style={{background:"#fff",borderRadius:20,padding:"20px 18px 16px",marginBottom:20,boxShadow:"0 4px 20px rgba(0,0,0,.06)",border:"1px solid #E8E7E3"}}>
         <div style={{textAlign:"center",fontSize:11,fontWeight:700,color:"#E84D0E",letterSpacing:".1em",marginBottom:12}}>● LIVE ESTIMATE</div>
         <select value={gProv} onChange={e=>setGProv(e.target.value)} style={{width:"100%",background:"#F8F7F4",color:"#111",border:"1px solid #E8E7E3",borderRadius:10,padding:"8px 10px",fontSize:13,fontFamily:"inherit",textAlign:"center",marginBottom:14}}>
-          <option value="ON">Ontario</option>
-          <option value="AB">Alberta</option>
-          <option value="BC">British Columbia</option>
-          <option value="QC">Quebec</option>
+          {Object.entries(PROVINCE_NAMES).map(([code,name])=>(
+            <option key={code} value={code}>{name}</option>
+          ))}
         </select>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
           {(()=>{
@@ -652,6 +675,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   const [pendFile,setPendF] = useState(null);
   const [upgrade, setUpgrade]=useState(null);
   const [showProf,setShowP] = useState(false);
+  const [province, setProvince] = useState("ON");
   const [installPrompt, setInstallPrompt] = useState(null);
   const [showIosInstall, setShowIosInstall] = useState(false);
   const undoT = useRef();
@@ -697,12 +721,22 @@ useEffect(()=>{
       getDoc(doc(dbFs,"users",user.uid)).then(snap=>{
 const data = snap.exists() ? snap.data() : {};
         setTxns(data.txns||[]);
-
+        setProvince(data.province||"ON");
         setRdy(true);      }).catch(()=>{ setTxns([]); setRdy(true); });
     } else {
       db.get("ft5_txns").then(t=>{setTxns(t||[]);setRdy(true);});
+      db.get("ft5_province").then(p=>{setProvince(p||"ON");});
     }
   },[user?.uid, user?.contact]);
+
+  const updateProvince = async (p) => {
+    setProvince(p);
+    if(user?.uid) {
+      try { await setDoc(doc(dbFs,"users",user.uid), { province: p }, { merge: true }); } catch(e) { console.error("Province save failed:", e); }
+    } else {
+      await db.set("ft5_province", p);
+    }
+  };
 
   const commit = async (l) => {
     setTxns(l);
@@ -805,7 +839,7 @@ const data = snap.exists() ? snap.data() : {};
     let y = 20;
 
     pdf.setFontSize(16); pdf.setFont(undefined,"bold");
-    pdf.text(`Personal Tax Report - Ontario ${yr}`, marginX, y); y += 7;
+    pdf.text(`Personal Tax Report - ${PROVINCE_NAMES[province]} ${yr}`, marginX, y); y += 7;
     pdf.setFontSize(10); pdf.setFont(undefined,"normal"); pdf.setTextColor(130);
     pdf.text(`Generated: ${new Date().toLocaleDateString("en-CA")}`, marginX, y); y += 8;
     pdf.setDrawColor(220); pdf.line(marginX, y, 196, y); y += 10;
@@ -858,7 +892,7 @@ const data = snap.exists() ? snap.data() : {};
     const checkPage = () => { if(y > pageBottom) { pdf.addPage(); y = 20; } };
 
     pdf.setFontSize(16); pdf.setFont(undefined,"bold");
-    pdf.text(`Corporation T2 Report - Ontario ${yr}`, marginX, y); y += 7;
+    pdf.text(`Corporation T2 Report - ${PROVINCE_NAMES[province]} ${yr}`, marginX, y); y += 7;
     pdf.setFontSize(10); pdf.setFont(undefined,"normal"); pdf.setTextColor(130);
     pdf.text(`Generated: ${new Date().toLocaleDateString("en-CA")}`, marginX, y); y += 8;
     pdf.setDrawColor(220); pdf.line(marginX, y, 196, y); y += 10;
@@ -1332,7 +1366,14 @@ const data = snap.exists() ? snap.data() : {};
           <div style={{padding:"14px 16px 20px"}}>
             {dlToast&&<div style={{position:"fixed",bottom:90,left:"50%",transform:"translateX(-50%)",background:"#111",color:"#fff",padding:"10px 24px",borderRadius:100,fontSize:13,fontWeight:600,zIndex:9999,boxShadow:"0 4px 20px rgba(0,0,0,.3)"}}>✅ Downloaded!</div>}
             <div style={{fontSize:17,fontWeight:600,letterSpacing:'-.3px',marginBottom:4}}>Tax Reports</div>
-            <div style={{fontSize:13,color:"#aaa",marginBottom:14}}>Canada · Ontario · {yr}</div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+              <span style={{fontSize:13,color:"#aaa"}}>Canada · {yr} ·</span>
+              <select value={province} onChange={e=>updateProvince(e.target.value)} style={{fontSize:13,fontWeight:600,color:"#E84D0E",background:"none",border:"none",padding:0,fontFamily:"inherit"}}>
+                {Object.entries(PROVINCE_NAMES).map(([code,name])=>(
+                  <option key={code} value={code}>{name}</option>
+                ))}
+              </select>
+            </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:18,background:"#ECEAE6",borderRadius:15,padding:4}}>
               {[{id:"personal",l:"👤 Personal T1"},{id:"corp",l:"💼 Corp T2"}].map(v=>(
                 <button key={v.id} className="btn" onClick={()=>{if(v.id==="corp"&&!hasCorp){setUpgrade("corp");return;}setTaxV(v.id);}} style={{padding:"10px",borderRadius:12,fontSize:12,fontWeight:700,border:"none",background:taxView===v.id?"#fff":"none",color:taxView===v.id?"#111":"#aaa",boxShadow:taxView===v.id?"0 2px 8px rgba(0,0,0,.08)":"none",position:"relative"}}>
@@ -1366,7 +1407,7 @@ const data = snap.exists() ? snap.data() : {};
                   <div style={{fontSize:10,color:"#818CF8",letterSpacing:".09em",marginBottom:8}}>T2 CORPORATION · {yr}</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:12}}><div><div style={{fontSize:10,color:"#6366F1",marginBottom:3}}>GROSS</div><div style={{fontSize:19,fontWeight:600}}>{fmt(corpGrossTotal)}</div></div><div><div style={{fontSize:10,color:"#6366F1",marginBottom:3}}>DEDUCTIBLE</div><div style={{fontSize:19,fontWeight:600,color:"#A5B4FC"}}>{fmt(corpDeductTotal)}</div></div></div>
                   <div style={{height:"1px",background:"rgba(255,255,255,.08)",marginBottom:12}}/>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}><div><div style={{fontSize:10,color:"#6366F1",marginBottom:3}}>HST ITC</div><div style={{fontSize:16,fontWeight:600,color:"#34D399"}}>{fmt(corpHSTTotal)}</div></div><div><div style={{fontSize:10,color:"#6366F1",marginBottom:3}}>ON CORP RATE</div><div style={{fontSize:16,fontWeight:600}}>12.2%</div></div></div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}><div><div style={{fontSize:10,color:"#6366F1",marginBottom:3}}>HST ITC</div><div style={{fontSize:16,fontWeight:600,color:"#34D399"}}>{fmt(corpHSTTotal)}</div></div><div><div style={{fontSize:10,color:"#6366F1",marginBottom:3}}>{province} CORP RATE</div><div style={{fontSize:16,fontWeight:600}}>{INC_TAX_RATES[province]}%</div></div></div>
                 </div>
                 <div style={{background:"#fff",borderRadius:16,padding:"16px",marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
                   <div style={{fontSize:10,fontWeight:700,color:"#bbb",letterSpacing:".08em",marginBottom:12}}>HST QUARTERLY RETURN</div>
