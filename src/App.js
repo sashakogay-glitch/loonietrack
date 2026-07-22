@@ -264,7 +264,7 @@ function AuthScreen({ onGuest, onAuth }) {
   <div style={{textAlign:"right"}}>Before April does.</div>
 </div>
         <div style={{fontSize:14,color:"#888",lineHeight:1.7}}>
-          Scan receipts, track income and HST, and know what to set aside for taxes — automatically.
+          LoonieTrack is the money app for Canadian owner-operators, tradespeople, and self-employed workers. Scan receipts, track income and HST, and know exactly what to set aside for taxes — automatically, every time you get paid. So April never surprises you.
         </div>
       </div>
 
@@ -1478,4 +1478,4 @@ export default function App() {
       onGoAuth={()=>{ setUser(null); setState("auth"); }}
     />
   );
-}
+}s
