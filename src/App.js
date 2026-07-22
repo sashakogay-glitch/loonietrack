@@ -1478,4 +1478,4 @@ export default function App() {
       onGoAuth={()=>{ setUser(null); setState("auth"); }}
     />
   );
-}s
+}
