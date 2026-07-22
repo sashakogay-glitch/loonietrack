@@ -62,6 +62,17 @@ const TAX_TAGS = [
 ];
 
 const FREE_LIMIT = 10;
+
+// ─── Tax reserve gauge estimates (illustrative only, not tax advice) ───────────
+const SOLE_TAX_RATES = {
+  ON: {30000:18, 60000:25, 100000:30, 150000:35},
+  AB: {30000:17, 60000:24, 100000:29, 150000:33},
+  BC: {30000:17, 60000:24, 100000:29, 150000:34},
+  QC: {30000:20, 60000:28, 100000:34, 150000:39},
+};
+const INC_TAX_RATES = { ON:12.2, AB:11.0, BC:11.0, QC:12.2 };
+const GAUGE_INCOME_LABELS = { 30000:"$30K", 60000:"$60K", 100000:"$100K", 150000:"$150K+" };
+const GAUGE_ARC_LEN = 214;
 const PLANS = {
   free:     { label:"Free",     price:0,    receipts:FREE_LIMIT, corp:false },
   personal: { label:"Personal", price:3.99, receipts:Infinity,   corp:false },
@@ -170,6 +181,9 @@ function AuthScreen({ onGuest, onAuth }) {
   const [showPass,setShowP]  = useState(false);
   const [err,     setErr]    = useState("");
   const [loading, setLoad]   = useState(false);
+  const [gIncome, setGIncome]= useState(60000);
+  const [gStatus, setGStatus]= useState("sole");
+  const [gProv,   setGProv]  = useState("ON");
 
   const submit = async () => {
     if(mode==="signup"&&!name.trim()){setErr("Please enter your name");return;}
@@ -217,13 +231,78 @@ function AuthScreen({ onGuest, onAuth }) {
   {/* CHOICE SCREEN */}
   {mode==="choice"&&(
     <div style={{animation:"fadeUp .4s ease",display:"flex",flexDirection:"column",flex:1}}>
-      <div style={{marginBottom:24}}>
+      <div style={{marginBottom:20}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#E84D0E",letterSpacing:".08em",marginBottom:10}}>
+          🇨🇦 BUILT IN CANADA — FOR THE SELF-EMPLOYED
+        </div>
         <div style={{fontSize:"clamp(28px, 8.5vw, 37px)",fontWeight:700,letterSpacing:'-.5px',marginBottom:8}}>
-  <div style={{textAlign:"left"}}>Control your loonies</div>
-  <div style={{textAlign:"right"}}>— save millions.</div>
+  <div style={{textAlign:"left"}}>Know what you owe.</div>
+  <div style={{textAlign:"right"}}>Before April does.</div>
 </div>
         <div style={{fontSize:14,color:"#888",lineHeight:1.7}}>
-          Scan receipts, track expenses, and generate Ontario tax reports — personal and corporate.
+          Scan receipts, track income and HST, and know what to set aside for taxes — automatically.
+        </div>
+      </div>
+
+      {/* Tax reserve gauge — live estimate */}
+      <div style={{background:"#fff",borderRadius:20,padding:"20px 18px 16px",marginBottom:20,boxShadow:"0 4px 20px rgba(0,0,0,.06)",border:"1px solid #E8E7E3"}}>
+        <div style={{textAlign:"center",fontSize:11,fontWeight:700,color:"#E84D0E",letterSpacing:".1em",marginBottom:12}}>● LIVE ESTIMATE</div>
+        <select value={gProv} onChange={e=>setGProv(e.target.value)} style={{width:"100%",background:"#F8F7F4",color:"#111",border:"1px solid #E8E7E3",borderRadius:10,padding:"8px 10px",fontSize:13,fontFamily:"inherit",textAlign:"center",marginBottom:14}}>
+          <option value="ON">Ontario</option>
+          <option value="AB">Alberta</option>
+          <option value="BC">British Columbia</option>
+          <option value="QC">Quebec</option>
+        </select>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+          {(()=>{
+            const brackets=[30000,60000,100000,150000];
+            const idx=brackets.indexOf(gIncome);
+            const incomeFill=(idx+1)/brackets.length;
+            const incomeOffset=Math.round(GAUGE_ARC_LEN*(1-incomeFill));
+            const pct = gStatus==="inc" ? INC_TAX_RATES[gProv] : SOLE_TAX_RATES[gProv][gIncome];
+            const pctCapped = Math.min(pct,50)/50;
+            const pctOffset = Math.round(GAUGE_ARC_LEN*(1-pctCapped));
+            const pctLabel = (pct%1===0?pct:pct.toFixed(1))+"%";
+            return (<>
+              <div style={{textAlign:"center"}}>
+                <div style={{position:"relative",maxWidth:150,margin:"0 auto 6px"}}>
+                  <svg viewBox="0 0 160 90" style={{width:"100%",display:"block"}}>
+                    <path d="M12 82 A68 68 0 0 1 148 82" fill="none" stroke="#F0EFEC" strokeWidth="12" strokeLinecap="round"/>
+                    <path d="M12 82 A68 68 0 0 1 148 82" fill="none" stroke="#E84D0E" strokeWidth="12" strokeLinecap="round" strokeDasharray={GAUGE_ARC_LEN} strokeDashoffset={incomeOffset} style={{transition:"stroke-dashoffset .3s ease"}}/>
+                  </svg>
+                  <div style={{position:"absolute",left:0,right:0,bottom:2,textAlign:"center"}}>
+                    <div style={{fontSize:20,fontWeight:700}}>{GAUGE_INCOME_LABELS[gIncome]}</div>
+                    <div style={{fontSize:10,color:"#aaa"}}>annual income</div>
+                  </div>
+                </div>
+                <select value={gIncome} onChange={e=>setGIncome(Number(e.target.value))} style={{width:"100%",background:"#F8F7F4",color:"#111",border:"1px solid #E8E7E3",borderRadius:9,padding:"7px 8px",fontSize:12,fontFamily:"inherit",textAlign:"center"}}>
+                  <option value={30000}>~$30,000</option>
+                  <option value={60000}>~$60,000</option>
+                  <option value={100000}>~$100,000</option>
+                  <option value={150000}>~$150,000+</option>
+                </select>
+              </div>
+              <div style={{textAlign:"center"}}>
+                <div style={{position:"relative",maxWidth:150,margin:"0 auto 6px"}}>
+                  <svg viewBox="0 0 160 90" style={{width:"100%",display:"block"}}>
+                    <path d="M12 82 A68 68 0 0 1 148 82" fill="none" stroke="#F0EFEC" strokeWidth="12" strokeLinecap="round"/>
+                    <path d="M12 82 A68 68 0 0 1 148 82" fill="none" stroke="#4F46E5" strokeWidth="12" strokeLinecap="round" strokeDasharray={GAUGE_ARC_LEN} strokeDashoffset={pctOffset} style={{transition:"stroke-dashoffset .3s ease"}}/>
+                  </svg>
+                  <div style={{position:"absolute",left:0,right:0,bottom:2,textAlign:"center"}}>
+                    <div style={{fontSize:20,fontWeight:700}}>{pctLabel}</div>
+                    <div style={{fontSize:10,color:"#aaa"}}>tax reserve</div>
+                  </div>
+                </div>
+                <select value={gStatus} onChange={e=>setGStatus(e.target.value)} style={{width:"100%",background:"#F8F7F4",color:"#111",border:"1px solid #E8E7E3",borderRadius:9,padding:"7px 8px",fontSize:12,fontFamily:"inherit",textAlign:"center"}}>
+                  <option value="sole">Sole proprietor</option>
+                  <option value="inc">Incorporated</option>
+                </select>
+              </div>
+            </>);
+          })()}
+        </div>
+        <div style={{textAlign:"center",fontSize:10.5,color:"#bbb",marginTop:12,lineHeight:1.5}}>
+          Rough guide only, not tax advice — sign up for your exact number.
         </div>
       </div>
 
