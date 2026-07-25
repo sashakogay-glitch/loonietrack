@@ -105,6 +105,7 @@ const PLANS = {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 const gid  = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+const track = (event, params) => { try { if(window.gtag) window.gtag("event", event, params||{}); } catch(e) {} };
 const fmt  = (n) => new Intl.NumberFormat("en-CA",{style:"currency",currency:"CAD"}).format(n||0);
 const parseDate = (d) => { if(!d) return new Date(); if(d.includes("T")) return new Date(d); return new Date(d+"T12:00:00"); };
 const fmtD = (d) => { const date=parseDate(d),now=new Date(),yest=new Date(); yest.setDate(now.getDate()-1); if(date.toDateString()===now.toDateString()) return "Today"; if(date.toDateString()===yest.toDateString()) return "Yesterday"; return date.toLocaleDateString("en-CA",{month:"short",day:"numeric"}); };
@@ -218,6 +219,7 @@ function AuthScreen({ onGuest, onAuth }) {
     try {
       if(mode==="signup") {
         const cred = await createUserWithEmailAndPassword(auth, contact.trim(), pass);
+        track("sign_up", { method: "email" });
         if(name.trim()) await updateProfile(cred.user, { displayName: name.trim() });
       } else {
         await signInWithEmailAndPassword(auth, contact.trim(), pass);
@@ -707,6 +709,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
 
 useEffect(()=>{
     if(window.location.search.includes("upgrade=success")&&user?.uid){
+      track("purchase", { method: "stripe_subscription" });
       setTimeout(()=>{
         getDoc(doc(dbFs,"users",user.uid)).then(snap=>{
           if(snap.exists()&&snap.data().plan){
@@ -1124,6 +1127,7 @@ const data = snap.exists() ? snap.data() : {};
 
       {upgrade&&<UpgradeModal reason={upgrade} isGuest={isGuest} onClose={()=>setUpgrade(null)} onSignUp={()=>{setUpgrade(null);onGoAuth();}} onUpgrade={async(plan)=>{
   if(!auth.currentUser){setUpgrade(null);onGoAuth();return;}
+  track("begin_checkout", { plan });
   try{
     const r=await fetch("/api/create-checkout-session",{
       method:"POST",
