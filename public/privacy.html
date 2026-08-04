@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — LoonieTrack</title>
+<meta name="robots" content="index,follow">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#F5F4F0;color:#111;line-height:1.7;font-size:16px}
+.wrap{max-width:720px;margin:0 auto;padding:40px 20px 80px}
+.top{display:flex;align-items:center;gap:9px;margin-bottom:36px}
+.coin{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#F97316,#E84D0E 70%)}
+.top a{font-size:15px;font-weight:600;color:#111;text-decoration:none}
+h1{font-size:32px;letter-spacing:-.5px;margin-bottom:6px}
+.updated{font-size:13px;color:#aaa;margin-bottom:36px}
+h2{font-size:20px;margin:36px 0 12px;letter-spacing:-.3px}
+p, li{color:#444;margin-bottom:12px}
+ul{padding-left:22px;margin-bottom:12px}
+li{margin-bottom:6px}
+a{color:#E84D0E}
+.card{background:#fff;border:1px solid #E8E7E3;border-radius:14px;padding:18px 20px;margin:16px 0}
+.card b{display:block;margin-bottom:4px}
+footer{margin-top:56px;font-size:13px;color:#aaa;border-top:1px solid #E8E7E3;padding-top:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><span class="coin"></span><a href="/">LoonieTrack</a></div>
+
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: July 26, 2026</p>
+
+  <p>LoonieTrack ("we", "us") provides an expense-tracking and tax-reporting app for Canadian self-employed workers and small businesses, available at loonietrack.ca. This policy explains what personal information we collect, how we use it, and the choices you have. We comply with the Personal Information Protection and Electronic Documents Act (PIPEDA).</p>
+
+  <h2>1. Information we collect</h2>
+  <ul>
+    <li><b>Account information</b> — your name, email address, and password (stored in hashed form by our authentication provider; we never see your actual password).</li>
+    <li><b>Financial records you create</b> — expense transactions, amounts, merchants, categories, tax tags, HST amounts, your selected province, and photos of receipts you choose to upload.</li>
+    <li><b>Subscription information</b> — your plan level and Stripe customer reference. Your payment card details are collected and stored by Stripe, never by us.</li>
+    <li><b>Usage analytics</b> — anonymous usage events (such as sign-ups and page views) via Google Analytics, used to improve the product.</li>
+  </ul>
+
+  <h2>2. How we use your information</h2>
+  <ul>
+    <li>To provide the service: store your transactions, generate your reports, and sync your data across devices.</li>
+    <li>To read receipt photos you scan: images are processed by an AI service (Anthropic) solely to extract the merchant, amount, date, and tax information. <b>Your receipt images are not used to train AI models.</b></li>
+    <li>To process subscription payments through Stripe.</li>
+    <li>To respond to support requests you send to hello@loonietrack.ca.</li>
+  </ul>
+  <p>We do not sell, rent, or trade your personal information. Ever.</p>
+
+  <h2>3. Where your data lives</h2>
+  <div class="card"><b>Storage & hosting</b>Your account data and transactions are stored in Google Firebase (Firestore) and receipt images in Google Cloud Storage. Our application is hosted on Vercel. Data is encrypted in transit (HTTPS/TLS) and at rest.</div>
+  <div class="card"><b>Access control</b>Your records are protected by authentication rules so that only your signed-in account can read or write your own data. Receipt images are likewise restricted to your account.</div>
+
+  <h2>4. Third-party services we rely on</h2>
+  <ul>
+    <li><b>Google Firebase / Google Cloud</b> — authentication, database, and file storage.</li>
+    <li><b>Stripe</b> — subscription payments (PCI-DSS compliant; card data never touches our servers).</li>
+    <li><b>Anthropic</b> — AI processing of receipt images you scan.</li>
+    <li><b>Google Analytics</b> — anonymous product usage statistics.</li>
+    <li><b>Vercel</b> — application hosting.</li>
+    <li><b>Cloudflare</b> — email routing for our support address.</li>
+  </ul>
+  <p>Each provider processes data under its own privacy and security commitments. Some providers may store data on servers located outside Canada (for example, in the United States); by using LoonieTrack you consent to this cross-border processing as permitted under PIPEDA.</p>
+
+  <h2>5. How long we keep your data</h2>
+  <p>We keep your data for as long as your account exists so that your financial history remains available to you. If you delete your account, your personal data, transactions, and receipt images are permanently deleted from our systems within 30 days, except where retention is required by law.</p>
+
+  <h2>6. Your rights</h2>
+  <ul>
+    <li><b>Access & correction</b> — you can view and edit your data at any time inside the app.</li>
+    <li><b>Deletion</b> — you may request full deletion of your account and data by emailing <a href="mailto:hello@loonietrack.ca">hello@loonietrack.ca</a>.</li>
+    <li><b>Withdrawal of consent</b> — you may stop using the service and request deletion at any time.</li>
+    <li><b>Complaints</b> — you may contact us first, and you also have the right to complain to the Office of the Privacy Commissioner of Canada (priv.gc.ca).</li>
+  </ul>
+
+  <h2>7. Not tax advice</h2>
+  <p>LoonieTrack provides record-keeping tools and estimates for reference only. It does not provide tax, legal, or accounting advice. Always confirm your filings with a qualified CPA before submitting to the CRA.</p>
+
+  <h2>8. Children</h2>
+  <p>LoonieTrack is intended for adults operating businesses or managing personal finances and is not directed at children under 13. We do not knowingly collect information from children.</p>
+
+  <h2>9. Changes to this policy</h2>
+  <p>If we make material changes, we will update the date above and, where appropriate, notify you in the app or by email.</p>
+
+  <h2>10. Contact</h2>
+  <p>Questions about privacy? Email us at <a href="mailto:hello@loonietrack.ca">hello@loonietrack.ca</a>.</p>
+
+  <footer>© 2026 LoonieTrack · Made in Canada · <a href="/terms.html">Terms of Service</a></footer>
+</div>
+</body>
+</html>

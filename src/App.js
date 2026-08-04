@@ -421,6 +421,15 @@ function AuthScreen({ onGuest, onAuth }) {
               </button>
 
               {mode==="signup"&&(
+                <div style={{textAlign:"center",fontSize:11.5,color:"#bbb",lineHeight:1.7}}>
+                  By creating an account you agree to our{" "}
+                  <a href="/terms.html" target="_blank" rel="noreferrer" style={{color:"#E84D0E",textDecoration:"none",fontWeight:600}}>Terms of Service</a>
+                  {" "}and{" "}
+                  <a href="/privacy.html" target="_blank" rel="noreferrer" style={{color:"#E84D0E",textDecoration:"none",fontWeight:600}}>Privacy Policy</a>.
+                </div>
+              )}
+
+              {mode==="signup"&&(
                 <div style={{textAlign:"center",fontSize:12,color:"#bbb",lineHeight:1.7}}>
                   Free plan: {FREE_LIMIT} receipts/month<br/>
                   Upgrade to Pro Personal ($3.99/mo) for unlimited
