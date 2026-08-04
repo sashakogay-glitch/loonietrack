@@ -687,6 +687,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   const [upgrade, setUpgrade]=useState(null);
   const [showProf,setShowP] = useState(false);
   const [province, setProvince] = useState("ON");
+  const [portalLoading, setPortalLoading] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [showIosInstall, setShowIosInstall] = useState(false);
   const undoT = useRef();
@@ -747,6 +748,25 @@ const data = snap.exists() ? snap.data() : {};
       try { await setDoc(doc(dbFs,"users",user.uid), { province: p }, { merge: true }); } catch(e) { console.error("Province save failed:", e); }
     } else {
       await db.set("ft5_province", p);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    if(!auth.currentUser) return;
+    setPortalLoading(true);
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const r = await fetch("/api/create-portal-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + idToken },
+      });
+      const data = await r.json();
+      if(data.url) { window.location.href = data.url; }
+      else { alert(data.error || "Could not open subscription management. Please try again or contact hello@loonietrack.ca."); }
+    } catch(e) {
+      alert("Network error: " + e.message);
+    } finally {
+      setPortalLoading(false);
     }
   };
 
@@ -983,6 +1003,7 @@ const data = snap.exists() ? snap.data() : {};
             </div>
             {!isStandalone()&&<button className="btn" onClick={handleInstallClick} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#111",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>📲 Install App</button>}
             {!isPro&&<button className="btn" onClick={()=>{setShowP(false);setUpgrade("corp");}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#E84D0E",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>⭐ Upgrade to Pro</button>}
+            {isPro&&<button className="btn" onClick={handleManageSubscription} disabled={portalLoading} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#555",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>{portalLoading?"Loading…":"⚙️ Manage Subscription"}</button>}
             {isGuest
               ? <button className="btn" onClick={()=>{setShowP(false);onGoAuth();}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#555",background:"none",borderRadius:8}}>📧 Sign Up / Sign In</button>
               : <><a href="https://wa.me/14168549304" target="_blank" rel="noreferrer" style={{display:"block",width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#25D366",background:"none",borderRadius:8,textDecoration:"none"}}>💬 Support</a><button className="btn" onClick={onSignOut} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#888",background:"none",borderRadius:8}}>🚪 Sign Out</button></>
