@@ -1,0 +1,103 @@
+const Stripe = require("stripe");
+
+const STORAGE_BUCKET = "loonietrack-4c0d2.firebasestorage.app";
+
+async function getGoogleAccessToken() {
+  const { GoogleAuth } = require("google-auth-library");
+  const auth = new GoogleAuth({
+    credentials: {
+      client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      private_key: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+    },
+    scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+  });
+  const client = await auth.getClient();
+  const token = await client.getAccessToken();
+  return token.token;
+}
+
+async function getUserDoc(uid, token) {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${uid}`;
+  const res = await fetch(url, { headers: { "Authorization": `Bearer ${token}` } });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+async function deleteFirestoreDoc(uid, token) {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${uid}`;
+  await fetch(url, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } });
+}
+
+async function deleteAllReceipts(uid, token) {
+  // List every object under receipts/{uid}/ then delete each one.
+  const prefix = encodeURIComponent(`receipts/${uid}/`);
+  const listUrl = `https://storage.googleapis.com/storage/v1/b/${STORAGE_BUCKET}/o?prefix=${prefix}`;
+  const listRes = await fetch(listUrl, { headers: { "Authorization": `Bearer ${token}` } });
+  if (!listRes.ok) return;
+  const data = await listRes.json();
+  const items = data.items || [];
+  await Promise.all(items.map(item => {
+    const objUrl = `https://storage.googleapis.com/storage/v1/b/${STORAGE_BUCKET}/o/${encodeURIComponent(item.name)}`;
+    return fetch(objUrl, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } });
+  }));
+}
+
+async function cancelStripeSubscription(subscriptionId) {
+  if (!subscriptionId) return;
+  try {
+    const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+    await stripe.subscriptions.cancel(subscriptionId);
+  } catch (e) {
+    console.error("Stripe cancel failed (continuing with deletion):", e.message);
+  }
+}
+
+async function deleteFirebaseAuthUser(idToken) {
+  // Self-delete using the user's own ID token — no admin privileges required.
+  await fetch("https://identitytoolkit.googleapis.com/v1/accounts:delete?key=" + process.env.FIREBASE_SERVER_KEY, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken }),
+  });
+}
+
+module.exports = async function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  const authHeader = req.headers.authorization || "";
+  const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!idToken) return res.status(401).json({ error: "Unauthorized - please sign in" });
+
+  let uid;
+  try {
+    const verifyRes = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${process.env.FIREBASE_SERVER_KEY}`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ idToken }) }
+    );
+    const verifyData = await verifyRes.json();
+    if (verifyData.error || !verifyData.users || !verifyData.users[0]) {
+      return res.status(401).json({ error: "Unauthorized - invalid session, please sign in again" });
+    }
+    uid = verifyData.users[0].localId;
+  } catch (e) {
+    return res.status(401).json({ error: "Unauthorized - could not verify session" });
+  }
+
+  try {
+    const token = await getGoogleAccessToken();
+    const doc = await getUserDoc(uid, token);
+    const subscriptionId = doc?.fields?.subscriptionId?.stringValue;
+
+    await cancelStripeSubscription(subscriptionId);
+    await deleteAllReceipts(uid, token);
+    await deleteFirestoreDoc(uid, token);
+    await deleteFirebaseAuthUser(idToken);
+
+    return res.status(200).json({ deleted: true });
+  } catch (e) {
+    console.error("Account deletion error:", e.message);
+    return res.status(500).json({ error: "Something went wrong deleting your account. Please contact hello@loonietrack.ca." });
+  }
+};

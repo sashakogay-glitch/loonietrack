@@ -712,6 +712,9 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   const [showProf,setShowP] = useState(false);
   const [province, setProvince] = useState("ON");
   const [portalLoading, setPortalLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [showIosInstall, setShowIosInstall] = useState(false);
   const undoT = useRef();
@@ -793,6 +796,29 @@ const data = snap.exists() ? snap.data() : {};
       setPortalLoading(false);
     }
   };
+
+  const handleDeleteAccount = async () => {
+    if(!auth.currentUser) return;
+    setDeleting(true);
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const r = await fetch("/api/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + idToken },
+      });
+      const data = await r.json();
+      if(data.deleted) {
+        onSignOut();
+      } else {
+        alert(data.error || "Something went wrong. Please try again or contact hello@loonietrack.ca.");
+        setDeleting(false);
+      }
+    } catch(e) {
+      alert("Network error: " + e.message);
+      setDeleting(false);
+    }
+  };
+
 
   const commit = async (l) => {
     setTxns(l);
@@ -1030,8 +1056,7 @@ const data = snap.exists() ? snap.data() : {};
             {isPro&&<button className="btn" onClick={handleManageSubscription} disabled={portalLoading} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#555",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>{portalLoading?"Loading…":"⚙️ Manage Subscription"}</button>}
             {isGuest
               ? <button className="btn" onClick={()=>{setShowP(false);onGoAuth();}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#555",background:"none",borderRadius:8}}>📧 Sign Up / Sign In</button>
-              : <><a href="https://wa.me/14168549304" target="_blank" rel="noreferrer" style={{display:"block",width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#25D366",background:"none",borderRadius:8,textDecoration:"none"}}>💬 Support</a><button className="btn" onClick={onSignOut} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#888",background:"none",borderRadius:8}}>🚪 Sign Out</button></>
-            }
+              : <><a href="https://wa.me/14168549304" target="_blank" rel="noreferrer" style={{display:"block",width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#25D366",background:"none",borderRadius:8,textDecoration:"none"}}>💬 Support</a><button className="btn" onClick={onSignOut} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#888",background:"none",borderRadius:8}}>🚪 Sign Out</button><div style={{height:1,background:"#F0EFEC",margin:"6px 4px"}}/><button className="btn" onClick={()=>{setShowP(false);setShowDeleteConfirm(true);}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#DC2626",background:"none",borderRadius:8}}>🗑️ Delete Account</button></>}
           </div>
         </>
       )}
@@ -1241,6 +1266,34 @@ const data = snap.exists() ? snap.data() : {};
             )}
             <button className="btn" onClick={()=>setShowIosInstall(false)} style={{width:"100%",padding:"14px",borderRadius:14,background:"linear-gradient(135deg,#E84D0E,#F97316)",color:"#fff",fontSize:14,fontWeight:600}}>
               Got it
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showDeleteConfirm&&(
+        <div style={{position:"fixed",inset:0,zIndex:500}}>
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.6)",backdropFilter:"blur(10px)"}} onClick={()=>{if(!deleting){setShowDeleteConfirm(false);setDeleteConfirmText("");}}}/>
+          <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#F5F4F0",borderRadius:"24px 24px 0 0",padding:"28px 20px 44px",animation:"sheet .25s ease",maxWidth:430,margin:"0 auto"}}>
+            <div style={{textAlign:"center",marginBottom:20}}>
+              <div style={{fontSize:44,marginBottom:10}}>⚠️</div>
+              <div style={{fontSize:17,fontWeight:700,marginBottom:8,color:"#DC2626"}}>Delete your account?</div>
+              <div style={{fontSize:13,color:"#666",lineHeight:1.7}}>
+                This will permanently delete:
+              </div>
+            </div>
+            <div style={{background:"#fff",border:"1.5px solid #FCA5A5",borderRadius:14,padding:"14px 16px",marginBottom:20}}>
+              {["All your transactions and history","All uploaded receipt photos","Your active subscription (cancelled immediately)","Your account and login — this cannot be undone"].map((t,i)=>(
+                <div key={i} style={{fontSize:13,color:"#444",padding:"6px 0",display:"flex",gap:8}}><span style={{color:"#DC2626"}}>✕</span>{t}</div>
+              ))}
+            </div>
+            <div style={{fontSize:12,fontWeight:700,color:"#888",letterSpacing:".05em",marginBottom:8}}>TYPE "DELETE" TO CONFIRM</div>
+            <input value={deleteConfirmText} onChange={e=>setDeleteConfirmText(e.target.value)} placeholder="DELETE" disabled={deleting} style={{width:"100%",padding:"14px 16px",border:"1.5px solid #E5E4E0",borderRadius:12,fontSize:15,fontFamily:"inherit",background:"#fff",outline:"none",marginBottom:16,textAlign:"center",fontWeight:700,letterSpacing:"0.1em"}}/>
+            <button className="btn" onClick={handleDeleteAccount} disabled={deleteConfirmText!=="DELETE"||deleting} style={{width:"100%",padding:"16px",borderRadius:14,background:deleteConfirmText==="DELETE"?"#DC2626":"#E5E4E0",color:deleteConfirmText==="DELETE"?"#fff":"#aaa",fontSize:14,fontWeight:700,marginBottom:10}}>
+              {deleting?"Deleting…":"Yes, delete my account"}
+            </button>
+            <button className="btn" onClick={()=>{setShowDeleteConfirm(false);setDeleteConfirmText("");}} disabled={deleting} style={{width:"100%",padding:"14px",background:"none",color:"#888",fontSize:13,fontWeight:600}}>
+              Cancel, keep my account
             </button>
           </div>
         </div>
