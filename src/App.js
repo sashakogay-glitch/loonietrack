@@ -95,6 +95,30 @@ const PROVINCE_NAMES = {
   MB:"Manitoba", NB:"New Brunswick", NS:"Nova Scotia", PE:"Prince Edward Island",
   NL:"Newfoundland and Labrador", YT:"Yukon", NT:"Northwest Territories", NU:"Nunavut",
 };
+
+// ─── Sales tax by province ───────────────────────────────────────────────────
+// type: "HST" (single combined tax, fully claimable), "GST" (5%, no provincial sales tax),
+// "GST+PST" (PST is a separate provincial tax, generally NOT recoverable as an ITC),
+// "GST+QST" (QST works like GST — both recoverable via ITC/ITR in Quebec).
+// itcRatio = the portion of whatever tax amount is logged on a transaction that's
+// actually recoverable as an Input Tax Credit — used only for Corp/HST ITC math.
+const PROVINCE_TAX = {
+  ON: { type:"HST", label:"HST", rate:13,    itcRatio:1 },
+  NB: { type:"HST", label:"HST", rate:15,    itcRatio:1 },
+  NS: { type:"HST", label:"HST", rate:14,    itcRatio:1 },
+  PE: { type:"HST", label:"HST", rate:15,    itcRatio:1 },
+  NL: { type:"HST", label:"HST", rate:15,    itcRatio:1 },
+  AB: { type:"GST", label:"GST", rate:5,     itcRatio:1 },
+  YT: { type:"GST", label:"GST", rate:5,     itcRatio:1 },
+  NT: { type:"GST", label:"GST", rate:5,     itcRatio:1 },
+  NU: { type:"GST", label:"GST", rate:5,     itcRatio:1 },
+  BC: { type:"GST+PST", label:"GST/PST", rate:12,    itcRatio:5/12 },
+  SK: { type:"GST+PST", label:"GST/PST", rate:11,    itcRatio:5/11 },
+  MB: { type:"GST+PST", label:"GST/PST", rate:12,    itcRatio:5/12 },
+  QC: { type:"GST+QST", label:"GST/QST", rate:14.975,itcRatio:1 },
+};
+const taxLabel = (p) => (PROVINCE_TAX[p]||PROVINCE_TAX.ON).label;
+
 const GAUGE_INCOME_LABELS = { 30000:"$30K", 60000:"$60K", 100000:"$100K", 150000:"$150K+" };
 const GAUGE_ARC_LEN = 214;
 const PLANS = {
@@ -859,7 +883,7 @@ const data = snap.exists() ? snap.data() : {};
   const donCredit=donTotal>0?Math.min(donTotal,200)*0.15+Math.max(0,donTotal-200)*0.29:0;
   const chdTotal=persYr.filter(t=>t.taxTag==="childcare").reduce((s,t)=>s+(t.amount||0),0);
   const corpBycat=CORP_CATS.map(c=>{const items=corpYr.filter(t=>t.category===c.id);const gross=items.reduce((s,t)=>s+(t.amount||0),0);const hst=items.reduce((s,t)=>s+(t.hst||0),0);return {...c,gross,hst,deductible:gross*(c.deduct/100),count:items.length,items};}).filter(c=>c.gross>0);
-  const corpGrossTotal=corpBycat.reduce((s,c)=>s+c.gross,0),corpDeductTotal=corpBycat.reduce((s,c)=>s+c.deductible,0),corpHSTTotal=corpBycat.filter(c=>c.hstClaimable).reduce((s,c)=>s+c.hst,0);
+  const corpGrossTotal=corpBycat.reduce((s,c)=>s+c.gross,0),corpDeductTotal=corpBycat.reduce((s,c)=>s+c.deductible,0),corpHSTTotal=corpBycat.filter(c=>c.hstClaimable).reduce((s,c)=>s+c.hst,0)*(PROVINCE_TAX[province]||PROVINCE_TAX.ON).itcRatio;
   const qData=["Q1 (Jan–Mar)","Q2 (Apr–Jun)","Q3 (Jul–Sep)","Q4 (Oct–Dec)"].map((label,qi)=>({label,hst:corpYr.filter(t=>{const m=parseDate(t.date||t.at).getMonth();return m>=qi*3&&m<qi*3+3;}).reduce((s,t)=>s+(t.hst||0),0)}));
   const bar6=Array.from({length:6},(_,i)=>{const d=new Date();d.setMonth(d.getMonth()-(5-i));const m=d.getMonth(),y=d.getFullYear();return {month:d.toLocaleDateString("en-CA",{month:"short"}),total:txns.filter(t=>{const td=parseDate(t.date||t.at);return td.getMonth()===m&&td.getFullYear()===y;}).reduce((s,t)=>s+(t.amount||0),0)};});
   const groups=(()=>{const g={};txns.slice(0,40).forEach(t=>{const k=fmtD(t.date||t.at);(g[k]=g[k]||[]).push(t);});return Object.entries(g).slice(0,7);})();
@@ -933,11 +957,11 @@ const data = snap.exists() ? snap.data() : {};
     pdf.setFontSize(11); pdf.setFont(undefined,"bold");
     pdf.text(`Gross: ${fmt(corpGrossTotal)}`, marginX, y);
     pdf.text(`Deductible: ${fmt(corpDeductTotal)}`, 105, y); y += 7;
-    pdf.text(`HST ITC: ${fmt(corpHSTTotal)}`, marginX, y); y += 10;
+    pdf.text(`${taxLabel(province)} ITC: ${fmt(corpHSTTotal)}`, marginX, y); y += 10;
     pdf.setFont(undefined,"normal");
 
     pdf.setFontSize(11); pdf.setFont(undefined,"bold");
-    pdf.text("Quarterly HST Return", marginX, y); y += 7;
+    pdf.text(`Quarterly ${taxLabel(province)} Return`, marginX, y); y += 7;
     pdf.setFont(undefined,"normal"); pdf.setFontSize(10);
     qData.forEach(q=>{
       pdf.text(q.label, marginX+2, y);
@@ -1042,7 +1066,7 @@ const data = snap.exists() ? snap.data() : {};
             <div style={{fontSize:19,fontWeight:600,marginBottom:6}}>Who paid for this?</div>
             <div style={{fontSize:13,color:"#888",marginBottom:24}}>Determines which account and tax report it goes to.</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-              {[{type:"personal",icon:"👤",title:"Personal",sub:"My own money\nT1 Return",bg:"#FFF3EE"},{type:"corp",icon:"💼",title:"Corporation",sub:"Company card\nT2 · HST ITC",bg:"#EEF2FF",locked:!hasCorp}].map(o=>(
+              {[{type:"personal",icon:"👤",title:"Personal",sub:"My own money\nT1 Return",bg:"#FFF3EE"},{type:"corp",icon:"💼",title:"Corporation",sub:`Company card\nT2 · ${taxLabel(province)} ITC`,bg:"#EEF2FF",locked:!hasCorp}].map(o=>(
                 <button key={o.type} className="btn" onClick={()=>onTypeChosen(o.type)} style={{padding:"22px 14px",borderRadius:18,background:"#fff",border:"2px solid #E8E7E3",display:"flex",flexDirection:"column",alignItems:"center",gap:8,boxShadow:"0 3px 16px rgba(0,0,0,.07)",position:"relative",opacity:o.locked?.85:1}}>
                   {o.locked&&<div style={{position:"absolute",top:-8,right:-8,background:"linear-gradient(135deg,#E84D0E,#F97316)",borderRadius:100,padding:"3px 9px",fontSize:9,fontWeight:700,color:"#fff"}}>PRO</div>}
                   <div style={{width:52,height:52,borderRadius:16,background:o.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>{o.icon}</div>
@@ -1091,7 +1115,7 @@ const data = snap.exists() ? snap.data() : {};
               <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",letterSpacing:".06em",marginBottom:5}}>MERCHANT</div><input value={manual.merchant} onChange={e=>setManual(m=>({...m,merchant:e.target.value}))} placeholder="e.g. Loblaws" style={{width:"100%",padding:"12px 14px",border:"1.5px solid #E5E4E0",borderRadius:12,fontSize:14,fontFamily:"inherit",background:"#fff",outline:"none"}}/></div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",letterSpacing:".06em",marginBottom:5}}>AMOUNT $</div><input type="number" inputMode="decimal" value={manual.amount} onChange={e=>setManual(m=>({...m,amount:e.target.value}))} placeholder="0.00" style={{width:"100%",padding:"12px 14px",border:"1.5px solid #E5E4E0",borderRadius:12,fontSize:14,fontFamily:"inherit",background:"#fff",outline:"none"}}/></div>
-                <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",letterSpacing:".06em",marginBottom:5}}>HST $</div><input type="number" inputMode="decimal" value={manual.hst} onChange={e=>setManual(m=>({...m,hst:e.target.value}))} placeholder="0.00" style={{width:"100%",padding:"12px 14px",border:"1.5px solid #E5E4E0",borderRadius:12,fontSize:14,fontFamily:"inherit",background:"#fff",outline:"none"}}/></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",letterSpacing:".06em",marginBottom:5}}>{taxLabel(province)} $</div><input type="number" inputMode="decimal" value={manual.hst} onChange={e=>setManual(m=>({...m,hst:e.target.value}))} placeholder="0.00" style={{width:"100%",padding:"12px 14px",border:"1.5px solid #E5E4E0",borderRadius:12,fontSize:14,fontFamily:"inherit",background:"#fff",outline:"none"}}/></div>
               </div>
               <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",letterSpacing:".06em",marginBottom:5}}>DATE</div><input type="date" value={manual.date} onChange={e=>setManual(m=>({...m,date:e.target.value}))} style={{width:"100%",padding:"12px 14px",border:"1.5px solid #E5E4E0",borderRadius:12,fontSize:14,fontFamily:"inherit",background:"#fff",outline:"none"}}/></div>
               <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",letterSpacing:".06em",marginBottom:7}}>CATEGORY</div>
@@ -1145,7 +1169,7 @@ const data = snap.exists() ? snap.data() : {};
                   <div key={t.id} onClick={()=>t.img&&setViewImg(t.img)} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 0",borderBottom:i<items.length-1?"1px solid #F0EFEC":"none",cursor:t.img?"pointer":"default"}}>
                     {t.img&&<img src={t.img} alt="" style={{width:36,height:36,borderRadius:10,objectFit:"cover",flexShrink:0,border:"1px solid #F0EFEC"}}/>}
                     <div style={{flex:1}}><div style={{fontSize:14,fontWeight:600}}>{t.merchant||c.label}</div><div style={{fontSize:12,color:"#aaa",marginTop:1}}>{fmtD(t.date||t.at)}</div></div>
-                    <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:600}}>{fmt(t.amount)}</div>{t.hst>0&&<div style={{fontSize:11,color:"#aaa",marginTop:1}}>HST {fmt(t.hst)}</div>}</div>
+                    <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:600}}>{fmt(t.amount)}</div>{t.hst>0&&<div style={{fontSize:11,color:"#aaa",marginTop:1}}>{taxLabel(province)} {fmt(t.hst)}</div>}</div>
                     <button className="btn" onClick={async(e)=>{e.stopPropagation();await del(t.id);setDrill(d=>({...d}));}} style={{background:"none",color:"#ddd",fontSize:18,padding:"2px 6px"}}>×</button>
                   </div>
                 ))}
@@ -1273,7 +1297,7 @@ const data = snap.exists() ? snap.data() : {};
                       </div>
                       <div style={{textAlign:"right",flexShrink:0}}>
                         <div style={{fontSize:14,fontWeight:600}}>{fmt(t.amount)}</div>
-                        {t.hst>0&&<div style={{fontSize:10,color:isCorp?"#4338CA":"#bbb",marginTop:1}}>HST {fmt(t.hst)}</div>}
+                        {t.hst>0&&<div style={{fontSize:10,color:isCorp?"#4338CA":"#bbb",marginTop:1}}>{taxLabel(province)} {fmt(t.hst)}</div>}
                       </div>
                       <button className="btn" onClick={(e)=>{e.stopPropagation();del(t.id);}} style={{background:"none",color:"#ddd",fontSize:18,padding:"2px 4px"}}>×</button>
                     </div>
@@ -1375,7 +1399,7 @@ const data = snap.exists() ? snap.data() : {};
                   <div style={{fontSize:20,fontWeight:700,letterSpacing:'-.2px'}}>{fmt(pTotalC)}</div>
                   <div style={{display:"flex",gap:16,marginTop:8}}>
                     <div><div style={{fontSize:10,color:"#4338CA"}}>DEDUCTIBLE</div><div style={{fontSize:14,fontWeight:600,color:"#4338CA"}}>{fmt(inPC.reduce((s,t)=>{const c=ccat(t.category);return s+(t.amount||0)*(c.deduct/100);},0))}</div></div>
-                    <div><div style={{fontSize:10,color:"#4338CA"}}>HST ITC</div><div style={{fontSize:14,fontWeight:600,color:"#4338CA"}}>{fmt(inPC.reduce((s,t)=>{const c=ccat(t.category);return c.hstClaimable?s+(t.hst||0):s;},0))}</div></div>
+                    <div><div style={{fontSize:10,color:"#4338CA"}}>{taxLabel(province)} ITC</div><div style={{fontSize:14,fontWeight:600,color:"#4338CA"}}>{fmt(inPC.reduce((s,t)=>{const c=ccat(t.category);return c.hstClaimable?s+(t.hst||0):s;},0)*(PROVINCE_TAX[province]||PROVINCE_TAX.ON).itcRatio)}</div></div>
                   </div>
                 </div>
                 <div style={{background:"#fff",borderRadius:16,padding:"18px",boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
@@ -1441,10 +1465,10 @@ const data = snap.exists() ? snap.data() : {};
                   <div style={{fontSize:10,color:"#818CF8",letterSpacing:".09em",marginBottom:8}}>T2 CORPORATION · {yr}</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:12}}><div><div style={{fontSize:10,color:"#6366F1",marginBottom:3}}>GROSS</div><div style={{fontSize:19,fontWeight:600}}>{fmt(corpGrossTotal)}</div></div><div><div style={{fontSize:10,color:"#6366F1",marginBottom:3}}>DEDUCTIBLE</div><div style={{fontSize:19,fontWeight:600,color:"#A5B4FC"}}>{fmt(corpDeductTotal)}</div></div></div>
                   <div style={{height:"1px",background:"rgba(255,255,255,.08)",marginBottom:12}}/>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}><div><div style={{fontSize:10,color:"#6366F1",marginBottom:3}}>HST ITC</div><div style={{fontSize:16,fontWeight:600,color:"#34D399"}}>{fmt(corpHSTTotal)}</div></div><div><div style={{fontSize:10,color:"#6366F1",marginBottom:3}}>{province} CORP RATE</div><div style={{fontSize:16,fontWeight:600}}>{INC_TAX_RATES[province]}%</div></div></div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}><div><div style={{fontSize:10,color:"#6366F1",marginBottom:3}}>{taxLabel(province)} ITC</div><div style={{fontSize:16,fontWeight:600,color:"#34D399"}}>{fmt(corpHSTTotal)}</div></div><div><div style={{fontSize:10,color:"#6366F1",marginBottom:3}}>{province} CORP RATE</div><div style={{fontSize:16,fontWeight:600}}>{INC_TAX_RATES[province]}%</div></div></div>
                 </div>
                 <div style={{background:"#fff",borderRadius:16,padding:"16px",marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
-                  <div style={{fontSize:10,fontWeight:700,color:"#bbb",letterSpacing:".08em",marginBottom:12}}>HST QUARTERLY RETURN</div>
+                  <div style={{fontSize:10,fontWeight:700,color:"#bbb",letterSpacing:".08em",marginBottom:12}}>{taxLabel(province)} QUARTERLY RETURN</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                     {qData.map((q,i)=><div key={i} style={{background:q.hst>0?"#EEF2FF":"#F8F7F4",borderRadius:10,padding:"12px"}}><div style={{fontSize:10,fontWeight:700,color:q.hst>0?"#4338CA":"#bbb",marginBottom:4}}>{q.label}</div><div style={{fontSize:14,fontWeight:600,color:q.hst>0?"#111":"#ccc"}}>{fmt(q.hst)}</div></div>)}
                   </div>
@@ -1456,6 +1480,7 @@ const data = snap.exists() ? snap.data() : {};
             )}
             <div style={{padding:"12px 14px",background:"#FFF3EE",border:"1.5px solid #FFD5C2",borderRadius:12,fontSize:12,color:"#B94A1A",lineHeight:1.6}}>
               ⚠️ Reference only — consult a CPA before filing with CRA.
+              {(PROVINCE_TAX[province]||PROVINCE_TAX.ON).type==="GST+PST" && <><br/>Note: in {PROVINCE_NAMES[province]}, only the GST portion of tax paid is typically recoverable as an ITC — PST generally is not.</>}
             </div>
           </div>
         )}
