@@ -72,6 +72,8 @@ const TAX_TAGS = [
 ];
 
 const FREE_LIMIT = 10;
+const PADDLE_PRICE_PERSONAL = "pri_01kzkgfpmw8pp3d725t63s1rd2";
+const PADDLE_PRICE_BUSINESS = "pri_01kzkg9gwswynch2gh2y9ay7ch";
 
 // ─── Tax reserve gauge estimates (illustrative only, not tax advice) ───────────
 const SOLE_TAX_RATES = {
@@ -728,6 +730,21 @@ function MainApp({ user, onSignOut, onGoAuth }) {
     return () => { window.removeEventListener("beforeinstallprompt", handler); window.removeEventListener("appinstalled", onInstalled); };
   },[]);
 
+  useEffect(()=>{
+    const initPaddle = () => {
+      if(window.Paddle && !window.__paddleInitialized) {
+        window.Paddle.Environment.set("sandbox"); // TODO: remove this line when switching to Paddle Live/Production
+        window.Paddle.Initialize({ token: "test_16f03d190e4112c87e0152b19f6" });
+        window.__paddleInitialized = true;
+      }
+    };
+    if(window.Paddle) { initPaddle(); return; }
+    const script = document.createElement("script");
+    script.src = "https://cdn.paddle.com/paddle/v2/paddle.js";
+    script.onload = initPaddle;
+    document.head.appendChild(script);
+  },[]);
+
   const isIos = () => /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone===true;
 
@@ -1204,19 +1221,18 @@ const data = snap.exists() ? snap.data() : {};
         );
       })()}
 
-      {upgrade&&<UpgradeModal reason={upgrade} isGuest={isGuest} onClose={()=>setUpgrade(null)} onSignUp={()=>{setUpgrade(null);onGoAuth();}} onUpgrade={async(plan)=>{
+      {upgrade&&<UpgradeModal reason={upgrade} isGuest={isGuest} onClose={()=>setUpgrade(null)} onSignUp={()=>{setUpgrade(null);onGoAuth();}} onUpgrade={(plan)=>{
   if(!auth.currentUser){setUpgrade(null);onGoAuth();return;}
   track("begin_checkout", { plan });
-  try{
-    const r=await fetch("/api/create-checkout-session",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({plan,userId:auth.currentUser.uid,email:auth.currentUser.email})
-    });
-    const data=await r.json();
-    if(data.url){window.location.href=data.url;}
-    else{alert("Checkout error: "+(data.error||"unknown error"));}
-  }catch(e){alert("Network error: "+e.message);}
+  if(!window.Paddle){ alert("Payment system is still loading — please try again in a moment."); return; }
+  const priceId = plan==="business" ? PADDLE_PRICE_BUSINESS : PADDLE_PRICE_PERSONAL;
+  window.Paddle.Checkout.open({
+    items: [{ priceId, quantity: 1 }],
+    customer: { email: auth.currentUser.email },
+    customData: { userId: auth.currentUser.uid, plan },
+    settings: { displayMode: "overlay", theme: "light", locale: "en" },
+  });
+  setUpgrade(null);
 }}/>}
 
       {showIosInstall&&(
