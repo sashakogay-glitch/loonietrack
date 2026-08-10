@@ -1,5 +1,3 @@
-const Stripe = require("stripe");
-
 const STORAGE_BUCKET = "loonietrack-4c0d2.firebasestorage.app";
 
 async function getGoogleAccessToken() {
@@ -44,13 +42,21 @@ async function deleteAllReceipts(uid, token) {
   }));
 }
 
-async function cancelStripeSubscription(subscriptionId) {
+async function cancelPaddleSubscription(subscriptionId) {
   if (!subscriptionId) return;
   try {
-    const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-    await stripe.subscriptions.cancel(subscriptionId);
+    // TODO: switch to https://api.paddle.com when moving off Paddle Sandbox to Production
+    const base = "https://sandbox-api.paddle.com";
+    await fetch(`${base}/subscriptions/${subscriptionId}/cancel`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.PADDLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ effective_from: "immediately" }),
+    });
   } catch (e) {
-    console.error("Stripe cancel failed (continuing with deletion):", e.message);
+    console.error("Paddle cancel failed (continuing with deletion):", e.message);
   }
 }
 
@@ -88,9 +94,9 @@ module.exports = async function handler(req, res) {
   try {
     const token = await getGoogleAccessToken();
     const doc = await getUserDoc(uid, token);
-    const subscriptionId = doc?.fields?.subscriptionId?.stringValue;
+    const subscriptionId = doc?.fields?.paddleSubscriptionId?.stringValue;
 
-    await cancelStripeSubscription(subscriptionId);
+    await cancelPaddleSubscription(subscriptionId);
     await deleteAllReceipts(uid, token);
     await deleteFirestoreDoc(uid, token);
     await deleteFirebaseAuthUser(idToken);

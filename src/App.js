@@ -1304,8 +1304,8 @@ const data = snap.exists() ? snap.data() : {};
               ))}
             </div>
             <div style={{fontSize:12,fontWeight:700,color:"#888",letterSpacing:".05em",marginBottom:8}}>TYPE "DELETE" TO CONFIRM</div>
-            <input value={deleteConfirmText} onChange={e=>setDeleteConfirmText(e.target.value)} placeholder="DELETE" disabled={deleting} style={{width:"100%",padding:"14px 16px",border:"1.5px solid #E5E4E0",borderRadius:12,fontSize:15,fontFamily:"inherit",background:"#fff",outline:"none",marginBottom:16,textAlign:"center",fontWeight:700,letterSpacing:"0.1em"}}/>
-            <button className="btn" onClick={handleDeleteAccount} disabled={deleteConfirmText!=="DELETE"||deleting} style={{width:"100%",padding:"16px",borderRadius:14,background:deleteConfirmText==="DELETE"?"#DC2626":"#E5E4E0",color:deleteConfirmText==="DELETE"?"#fff":"#aaa",fontSize:14,fontWeight:700,marginBottom:10}}>
+            <input value={deleteConfirmText} onChange={e=>setDeleteConfirmText(e.target.value)} placeholder="Type DELETE here" disabled={deleting} autoCapitalize="characters" autoCorrect="off" autoComplete="off" spellCheck="false" style={{width:"100%",padding:"14px 16px",border:"1.5px solid #D1D0CB",borderRadius:10,fontSize:15,fontFamily:"inherit",background:"#FAFAF8",outline:"none",marginBottom:16,textAlign:"left",fontWeight:400,color:"#111"}}/>
+            <button className="btn" onClick={handleDeleteAccount} disabled={deleteConfirmText.trim().toUpperCase()!=="DELETE"||deleting} style={{width:"100%",padding:"16px",borderRadius:14,background:deleteConfirmText.trim().toUpperCase()==="DELETE"?"#DC2626":"#E5E4E0",color:deleteConfirmText.trim().toUpperCase()==="DELETE"?"#fff":"#aaa",fontSize:14,fontWeight:700,marginBottom:10}}>
               {deleting?"Deleting…":"Yes, delete my account"}
             </button>
             <button className="btn" onClick={()=>{setShowDeleteConfirm(false);setDeleteConfirmText("");}} disabled={deleting} style={{width:"100%",padding:"14px",background:"none",color:"#888",fontSize:13,fontWeight:600}}>
