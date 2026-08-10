@@ -716,6 +716,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   const [portalLoading, setPortalLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [showIosInstall, setShowIosInstall] = useState(false);
@@ -1289,7 +1290,7 @@ const data = snap.exists() ? snap.data() : {};
 
       {showDeleteConfirm&&(
         <div style={{position:"fixed",inset:0,zIndex:500}}>
-          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.6)",backdropFilter:"blur(10px)"}} onClick={()=>{if(!deleting){setShowDeleteConfirm(false);setDeleteConfirmText("");}}}/>
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.6)",backdropFilter:"blur(10px)"}} onClick={()=>{if(!deleting){setShowDeleteConfirm(false);setDeleteConfirmText("");setDeletePassword("");}}}/>
           <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#F5F4F0",borderRadius:"24px 24px 0 0",padding:"28px 20px 44px",animation:"sheet .25s ease",maxWidth:430,margin:"0 auto"}}>
             <div style={{textAlign:"center",marginBottom:20}}>
               <div style={{fontSize:44,marginBottom:10}}>⚠️</div>
@@ -1308,7 +1309,7 @@ const data = snap.exists() ? snap.data() : {};
             <button className="btn" onClick={handleDeleteAccount} disabled={deleteConfirmText.trim().toUpperCase()!=="DELETE"||deleting} style={{width:"100%",padding:"16px",borderRadius:14,background:deleteConfirmText.trim().toUpperCase()==="DELETE"?"#DC2626":"#E5E4E0",color:deleteConfirmText.trim().toUpperCase()==="DELETE"?"#fff":"#aaa",fontSize:14,fontWeight:700,marginBottom:10}}>
               {deleting?"Deleting…":"Yes, delete my account"}
             </button>
-            <button className="btn" onClick={()=>{setShowDeleteConfirm(false);setDeleteConfirmText("");}} disabled={deleting} style={{width:"100%",padding:"14px",background:"none",color:"#888",fontSize:13,fontWeight:600}}>
+            <button className="btn" onClick={()=>{setShowDeleteConfirm(false);setDeleteConfirmText("");setDeletePassword("");}} disabled={deleting} style={{width:"100%",padding:"14px",background:"none",color:"#888",fontSize:13,fontWeight:600}}>
               Cancel, keep my account
             </button>
           </div>

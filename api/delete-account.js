@@ -60,13 +60,18 @@ async function cancelPaddleSubscription(subscriptionId) {
   }
 }
 
-async function deleteFirebaseAuthUser(idToken) {
-  // Self-delete using the user's own ID token — no admin privileges required.
-  await fetch("https://identitytoolkit.googleapis.com/v1/accounts:delete?key=" + process.env.FIREBASE_SERVER_KEY, {
+async function deleteFirebaseAuthUser(uid, token) {
+  // Admin-level delete using our service account (via localId) — unlike the
+  // self-service idToken path, this has NO "recent login" requirement.
+  const res = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:delete", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken }),
+    headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ localId: uid }),
   });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error("AUTH_DELETE_FAILED:" + (data?.error?.message || res.status));
+  }
 }
 
 module.exports = async function handler(req, res) {
@@ -99,7 +104,7 @@ module.exports = async function handler(req, res) {
     await cancelPaddleSubscription(subscriptionId);
     await deleteAllReceipts(uid, token);
     await deleteFirestoreDoc(uid, token);
-    await deleteFirebaseAuthUser(idToken);
+    await deleteFirebaseAuthUser(uid, token);
 
     return res.status(200).json({ deleted: true });
   } catch (e) {
