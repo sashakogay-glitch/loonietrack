@@ -1,5 +1,3 @@
-const Stripe = require("stripe");
-
 async function getFirestoreAccessToken() {
   const { GoogleAuth } = require("google-auth-library");
   const auth = new GoogleAuth({
@@ -46,18 +44,32 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({error:"Unauthorized - could not verify session"});
   }
 
-  // ── Look up this user's Stripe customer ID server-side (never trust a client-supplied ID) ──
+  // ── Look up this user's Paddle customer/subscription IDs server-side ──────
   try {
     const doc = await getUserDoc(uid);
-    const customerId = doc?.fields?.stripeCustomerId?.stringValue;
+    const customerId = doc?.fields?.paddleCustomerId?.stringValue;
+    const subscriptionId = doc?.fields?.paddleSubscriptionId?.stringValue;
     if(!customerId) return res.status(400).json({error:"No active subscription found for this account"});
 
-    const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: "https://loonietrack.ca/",
+    // TODO: switch to https://api.paddle.com when moving off Paddle Sandbox to Production
+    const base = "https://sandbox-api.paddle.com";
+    const body = subscriptionId ? { subscription_ids: [subscriptionId] } : {};
+    const r = await fetch(`${base}/customers/${customerId}/portal-sessions`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.PADDLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
     });
-    return res.status(200).json({ url: session.url });
+    const data = await r.json();
+    if(!r.ok) return res.status(500).json({ error: data?.error?.detail || "Could not open subscription management" });
+
+    const url = data?.data?.urls?.subscriptions?.[0]?.cancelSubscription
+      || data?.data?.urls?.subscriptions?.[0]?.updateSubscriptionPaymentMethod
+      || data?.data?.urls?.general?.overview;
+
+    return res.status(200).json({ url });
   } catch(e) {
     console.error("Portal session error:", e.message);
     return res.status(500).json({ error: e.message });
