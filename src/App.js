@@ -735,7 +735,12 @@ function MainApp({ user, onSignOut, onGoAuth }) {
     const initPaddle = () => {
       if(window.Paddle && !window.__paddleInitialized) {
         window.Paddle.Environment.set("sandbox"); // TODO: remove this line when switching to Paddle Live/Production
-        window.Paddle.Initialize({ token: "test_16f03d190e4112c87e0152b19f6" });
+        window.Paddle.Initialize({
+          token: "test_16f03d190e4112c87e0152b19f6",
+          eventCallback: function(e) {
+            if(e.name === "checkout.completed") { track("purchase", { method: "paddle_subscription" }); }
+          },
+        });
         window.__paddleInitialized = true;
       }
     };
@@ -762,18 +767,6 @@ function MainApp({ user, onSignOut, onGoAuth }) {
     setShowIosInstall(true); // fallback generic instructions for unsupported browsers
   };
 
-useEffect(()=>{
-    if(window.location.search.includes("upgrade=success")&&user?.uid){
-      track("purchase", { method: "stripe_subscription" });
-      setTimeout(()=>{
-        getDoc(doc(dbFs,"users",user.uid)).then(snap=>{
-          if(snap.exists()&&snap.data().plan){
-            window.location.href="/";
-          }
-        });
-      },4000);
-    }
-  },[user?.uid]);
   useEffect(()=>{
     if(user?.uid) {
       getDoc(doc(dbFs,"users",user.uid)).then(snap=>{
@@ -1231,7 +1224,7 @@ const data = snap.exists() ? snap.data() : {};
     items: [{ priceId, quantity: 1 }],
     customer: { email: auth.currentUser.email },
     customData: { userId: auth.currentUser.uid, plan },
-    settings: { displayMode: "overlay", theme: "light", locale: "en" },
+    settings: { displayMode: "overlay", theme: "light", locale: "en", allowedPaymentMethods: ["card", "apple_pay", "google_pay"] },
   });
   setUpgrade(null);
 }}/>}
