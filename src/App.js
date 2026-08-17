@@ -384,6 +384,18 @@ function AuthScreen({ onGuest, onAuth }) {
           Try free — {FREE_LIMIT} receipts/month
         </button>
       </div>
+
+      <div style={{marginTop:28,paddingTop:20,borderTop:"1px solid #E8E7E3",display:"flex",flexDirection:"column",gap:10}}>
+        {[
+          {icon:"🔒",text:"Payments secured by Paddle"},
+          {icon:"🔐",text:"Your data is encrypted in transit and at rest"},
+          {icon:"🇨🇦",text:"Built in Canada · never sold to third parties"},
+        ].map((t,i)=>(
+          <div key={i} style={{display:"flex",alignItems:"center",gap:9,fontSize:12,color:"#999"}}>
+            <span style={{fontSize:14}}>{t.icon}</span>{t.text}
+          </div>
+        ))}
+      </div>
     </div>
   )}
 
