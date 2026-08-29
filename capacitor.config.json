@@ -1,0 +1,11 @@
+{
+  "appId": "ca.loonietrack.app",
+  "appName": "LoonieTrack",
+  "webDir": "build",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
