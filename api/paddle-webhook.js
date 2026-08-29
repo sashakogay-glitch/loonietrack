@@ -72,8 +72,8 @@ async function updateFirestore(userId, plan, paddleCustomerId, paddleSubscriptio
 
 // Map a Paddle price ID back to our plan name.
 function planFromPriceId(priceId) {
-  if (priceId === "pri_01kzkgfpmw8pp3d725t63s1rd2") return "personal";
-  if (priceId === "pri_01kzkg9gwswynch2gh2y9ay7ch") return "business";
+  if (priceId === "pri_01m17b1cmmyw6db32jfjxj2m32") return "personal";
+  if (priceId === "pri_01m17bb3kkk2jdcvyswmqfqeqq") return "business";
   return null;
 }
 

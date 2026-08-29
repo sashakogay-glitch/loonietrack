@@ -72,8 +72,8 @@ const TAX_TAGS = [
 ];
 
 const FREE_LIMIT = 10;
-const PADDLE_PRICE_PERSONAL = "pri_01kzkgfpmw8pp3d725t63s1rd2";
-const PADDLE_PRICE_BUSINESS = "pri_01kzkg9gwswynch2gh2y9ay7ch";
+const PADDLE_PRICE_PERSONAL = "pri_01m17b1cmmyw6db32jfjxj2m32";
+const PADDLE_PRICE_BUSINESS = "pri_01m17bb3kkk2jdcvyswmqfqeqq";
 
 // ─── Tax reserve gauge estimates (illustrative only, not tax advice) ───────────
 const SOLE_TAX_RATES = {
@@ -746,9 +746,8 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   useEffect(()=>{
     const initPaddle = () => {
       if(window.Paddle && !window.__paddleInitialized) {
-        window.Paddle.Environment.set("sandbox"); // TODO: remove this line when switching to Paddle Live/Production
         window.Paddle.Initialize({
-          token: "test_16f03d190e4112c87e0152b19f6",
+          token: "live_a737b1fcc443e641a4c21f40489",
           eventCallback: function(e) {
             if(e.name === "checkout.completed") { track("purchase", { method: "paddle_subscription" }); }
           },

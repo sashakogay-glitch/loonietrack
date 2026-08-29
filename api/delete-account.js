@@ -45,8 +45,7 @@ async function deleteAllReceipts(uid, token) {
 async function cancelPaddleSubscription(subscriptionId) {
   if (!subscriptionId) return;
   try {
-    // TODO: switch to https://api.paddle.com when moving off Paddle Sandbox to Production
-    const base = "https://sandbox-api.paddle.com";
+    const base = "https://api.paddle.com";
     await fetch(`${base}/subscriptions/${subscriptionId}/cancel`, {
       method: "POST",
       headers: {

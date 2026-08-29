@@ -51,8 +51,7 @@ module.exports = async function handler(req, res) {
     const subscriptionId = doc?.fields?.paddleSubscriptionId?.stringValue;
     if(!customerId) return res.status(400).json({error:"No active subscription found for this account"});
 
-    // TODO: switch to https://api.paddle.com when moving off Paddle Sandbox to Production
-    const base = "https://sandbox-api.paddle.com";
+    const base = "https://api.paddle.com";
     const body = subscriptionId ? { subscription_ids: [subscriptionId] } : {};
     const r = await fetch(`${base}/customers/${customerId}/portal-sessions`, {
       method: "POST",
