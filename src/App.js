@@ -396,6 +396,12 @@ function AuthScreen({ onGuest, onAuth }) {
           </div>
         ))}
       </div>
+
+      <div style={{marginTop:20,display:"flex",justifyContent:"center",gap:14,flexWrap:"wrap"}}>
+        <a href="/terms.html" target="_blank" rel="noreferrer" style={{fontSize:11.5,color:"#bbb",textDecoration:"none"}}>Terms of Service</a>
+        <a href="/privacy.html" target="_blank" rel="noreferrer" style={{fontSize:11.5,color:"#bbb",textDecoration:"none"}}>Privacy Policy</a>
+        <a href="/refund.html" target="_blank" rel="noreferrer" style={{fontSize:11.5,color:"#bbb",textDecoration:"none"}}>Refund Policy</a>
+      </div>
     </div>
   )}
 
@@ -462,8 +468,10 @@ function AuthScreen({ onGuest, onAuth }) {
                 <div style={{textAlign:"center",fontSize:11.5,color:"#bbb",lineHeight:1.7}}>
                   By creating an account you agree to our{" "}
                   <a href="/terms.html" target="_blank" rel="noreferrer" style={{color:"#E84D0E",textDecoration:"none",fontWeight:600}}>Terms of Service</a>
+                  {", "}
+                  <a href="/privacy.html" target="_blank" rel="noreferrer" style={{color:"#E84D0E",textDecoration:"none",fontWeight:600}}>Privacy Policy</a>
                   {" "}and{" "}
-                  <a href="/privacy.html" target="_blank" rel="noreferrer" style={{color:"#E84D0E",textDecoration:"none",fontWeight:600}}>Privacy Policy</a>.
+                  <a href="/refund.html" target="_blank" rel="noreferrer" style={{color:"#E84D0E",textDecoration:"none",fontWeight:600}}>Refund Policy</a>.
                 </div>
               )}
 
