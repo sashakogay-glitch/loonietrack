@@ -637,7 +637,7 @@ function CameraScanner({ onCapture, onClose }) {
       {flash && <div style={{position:"absolute",inset:0,background:"#fff",opacity:.85,zIndex:20,pointerEvents:"none"}}/>}
       {!captured ? (
         <>
-          <video ref={videoRef} autoPlay playsInline muted onCanPlay={onVideoReady} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+          <video ref={videoRef} autoPlay playsInline muted poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBTAA7" onCanPlay={onVideoReady} style={{width:"100%",height:"100%",objectFit:"cover",background:"#000"}}/>
           {err ? (
             <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,background:"rgba(0,0,0,.85)"}}>
               <div style={{fontSize:48,marginBottom:16}}>📷</div>
