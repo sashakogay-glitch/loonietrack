@@ -6,6 +6,8 @@
     "@capacitor/android": "^8.5.0",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
+    "@capacitor/status-bar": "^8.0.3",
+    "@capawesome/capacitor-android-edge-to-edge-support": "^8.0.8",
     "firebase": "^12.15.0",
     "firebase-admin": "^14.0.0",
     "google-auth-library": "^10.7.0",
