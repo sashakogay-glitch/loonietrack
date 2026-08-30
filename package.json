@@ -30,5 +30,8 @@
     "development": [
       "last 1 chrome version"
     ]
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5"
   }
 }
