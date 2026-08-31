@@ -1,2 +1,4 @@
 node_modules/
 *.keystore
+*.keystore
+keystore.properties
