@@ -169,7 +169,7 @@ async function aiScan(b64,mime,type) {
       xhr.abort();
       reject(new Error("Timeout: server не ответил за 20 сек"));
     }, 20000);
-    xhr.open("POST", "https://loonietrack.ca/api/scan", true);
+    xhr.open("POST", "https://www.loonietrack.ca/api/scan", true);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.setRequestHeader("Authorization", "Bearer " + idToken);
     xhr.onreadystatechange = function() {
@@ -813,7 +813,7 @@ const data = snap.exists() ? snap.data() : {};
     setPortalLoading(true);
     try {
       const idToken = await auth.currentUser.getIdToken();
-      const r = await fetch("https://loonietrack.ca/api/create-portal-session", {
+      const r = await fetch("https://www.loonietrack.ca/api/create-portal-session", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + idToken },
       });
@@ -832,7 +832,7 @@ const data = snap.exists() ? snap.data() : {};
     setDeleting(true);
     try {
       const idToken = await auth.currentUser.getIdToken();
-      const r = await fetch("https://loonietrack.ca/api/delete-account", {
+      const r = await fetch("https://www.loonietrack.ca/api/delete-account", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + idToken },
       });
