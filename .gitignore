@@ -2,3 +2,12 @@ node_modules/
 *.keystore
 *.keystore
 keystore.properties
+
+# Capacitor / Android
+android/local.properties
+android/.gradle/
+android/app/build/
+android/build/
+*.jks
+*.keystore
+key.properties
