@@ -5,6 +5,8 @@ import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndP
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import jsPDF from "jspdf";
+import { Capacitor } from '@capacitor/core';
+const isNative = Capacitor.isNativePlatform();
 
 // ─── Firebase auth error → friendly message ────────────────────────────────────
 function authErrorMsg(code) {
@@ -511,6 +513,7 @@ function UpgradeModal({ reason, isGuest, onClose, onSignUp, onUpgrade }) {
 
         {/* Plans */}
         <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:22}}>
+          {!isNative && (<>
           {/* Pro Personal */}
           <div style={{background:"#fff",borderRadius:18,padding:"18px",border:"2px solid rgba(232,77,14,.25)",boxShadow:"0 4px 16px rgba(232,77,14,.1)"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
@@ -550,8 +553,8 @@ function UpgradeModal({ reason, isGuest, onClose, onSignUp, onUpgrade }) {
               Upgrade to Business — $7.99/mo
             </button>
           </div>
+        </>)}
         </div>
-
         {/* Sign up option for guests */}
         {isGuest&&isLimit&&(
           <button className="btn" onClick={onSignUp} style={{width:"100%",padding:"14px",borderRadius:14,background:"#fff",border:"1.5px solid #E5E4E0",color:"#555",fontSize:14,fontWeight:600,marginBottom:10}}>
@@ -1081,8 +1084,8 @@ const data = snap.exists() ? snap.data() : {};
               <div style={{fontSize:12,color:"#aaa",marginTop:2}}>{isGuest?"No account":user.contact}</div>
               <div style={{marginTop:8,display:"inline-flex",padding:"3px 10px",borderRadius:100,background:isPro?"linear-gradient(135deg,#E84D0E,#F97316)":"#F3F3F1",color:isPro?"#fff":"#888",fontSize:11,fontWeight:700}}>{planLabel} Plan{isPro?"":" · "+monthUsed+"/"+FREE_LIMIT+" used"}</div>
             </div>
-            {!isStandalone()&&<button className="btn" onClick={handleInstallClick} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#111",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>📲 Install App</button>}
-            {!isPro&&<button className="btn" onClick={()=>{setShowP(false);setUpgrade("corp");}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#E84D0E",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>⭐ Upgrade to Pro</button>}
+            {!isStandalone()&&!isNative&&<button className="btn" onClick={handleInstallClick} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#111",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>📲 Install App</button>}
+            {!isPro&&!isNative&&<button className="btn" onClick={()=>{setShowP(false);setUpgrade("corp");}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#E84D0E",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>⭐ Upgrade to Pro</button>}
             {isPro&&<button className="btn" onClick={handleManageSubscription} disabled={portalLoading} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#555",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>{portalLoading?"Loading…":"⚙️ Manage Subscription"}</button>}
             {isGuest
               ? <button className="btn" onClick={()=>{setShowP(false);onGoAuth();}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#555",background:"none",borderRadius:8}}>📧 Sign Up / Sign In</button>
@@ -1251,7 +1254,7 @@ const data = snap.exists() ? snap.data() : {};
       {showIosInstall&&(
         <div style={{position:"fixed",inset:0,zIndex:400}}>
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.55)",backdropFilter:"blur(10px)"}} onClick={()=>setShowIosInstall(false)}/>
-          <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#F5F4F0",borderRadius:"24px 24px 0 0",padding:"28px 20px 44px",animation:"sheet .25s ease",maxWidth:430,margin:"0 auto"}}>
+          <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#F5F4F0",borderRadius:"24px 24px 0 0",padding:"28px 20px 44px",animation:"sheet .25s ease",maxWidth:430,margin:"0 auto",maxHeight:"calc(100vh - env(safe-area-inset-top) - 24px)",overflowY:"auto"}}>
             <div style={{textAlign:"center",marginBottom:24}}>
               <div style={{fontSize:44,marginBottom:10}}>📲</div>
               <div style={{fontSize:17,fontWeight:600,marginBottom:6}}>Install LoonieTrack</div>
@@ -1303,7 +1306,7 @@ const data = snap.exists() ? snap.data() : {};
       {showDeleteConfirm&&(
         <div style={{position:"fixed",inset:0,zIndex:500}}>
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.6)",backdropFilter:"blur(10px)"}} onClick={()=>{if(!deleting){setShowDeleteConfirm(false);setDeleteConfirmText("");setDeletePassword("");}}}/>
-          <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#F5F4F0",borderRadius:"24px 24px 0 0",padding:"28px 20px 44px",animation:"sheet .25s ease",maxWidth:430,margin:"0 auto"}}>
+          <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#F5F4F0",borderRadius:"24px 24px 0 0",padding:"28px 20px 44px",animation:"sheet .25s ease",maxWidth:430,margin:"0 auto",maxHeight:"calc(100vh - env(safe-area-inset-top) - 24px)",overflowY:"auto"}}>
             <div style={{textAlign:"center",marginBottom:20}}>
               <div style={{fontSize:44,marginBottom:10}}>⚠️</div>
               <div style={{fontSize:17,fontWeight:700,marginBottom:8,color:"#DC2626"}}>Delete your account?</div>

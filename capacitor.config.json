@@ -9,11 +9,11 @@
     "allowMixedContent": false
   },
   "plugins": {
+    "Keyboard": {
+      "resize": "body"
+    },
     "EdgeToEdge": {
       "backgroundColor": "#F5F4F0"
-    },
-    "SystemBars": {
-      "insetsHandling": "disable"
     }
   }
 }
