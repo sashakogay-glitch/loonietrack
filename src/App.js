@@ -7,6 +7,8 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import jsPDF from "jspdf";
 import { Capacitor } from '@capacitor/core';
 const isNative = Capacitor.isNativePlatform();
+import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
+const RC_API_KEY = 'goog_MwWKhTJHhGTDxPPCeBZUXgxJujp';
 
 // ─── Firebase auth error → friendly message ────────────────────────────────────
 function authErrorMsg(code) {
@@ -389,7 +391,6 @@ function AuthScreen({ onGuest, onAuth }) {
 
       <div style={{marginTop:28,paddingTop:20,borderTop:"1px solid #E8E7E3",display:"flex",flexDirection:"column",gap:10}}>
         {[
-          {icon:"🔒",text:"Payments secured by Paddle"},
           {icon:"🔐",text:"Your data is encrypted in transit and at rest"},
           {icon:"🇨🇦",text:"Built in Canada · never sold to third parties"},
         ].map((t,i)=>(
@@ -513,7 +514,7 @@ function UpgradeModal({ reason, isGuest, onClose, onSignUp, onUpgrade }) {
 
         {/* Plans */}
         <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:22}}>
-          {!isNative && (<>
+          <>
           {/* Pro Personal */}
           <div style={{background:"#fff",borderRadius:18,padding:"18px",border:"2px solid rgba(232,77,14,.25)",boxShadow:"0 4px 16px rgba(232,77,14,.1)"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
@@ -553,7 +554,7 @@ function UpgradeModal({ reason, isGuest, onClose, onSignUp, onUpgrade }) {
               Upgrade to Business — $7.99/mo
             </button>
           </div>
-        </>)}
+        </>
         </div>
         {/* Sign up option for guests */}
         {isGuest&&isLimit&&(
@@ -710,6 +711,25 @@ function CameraScanner({ onCapture, onClose }) {
 // MAIN APP
 // ══════════════════════════════════════════════════════════════════════════════
 function MainApp({ user, onSignOut, onGoAuth }) {
+  const buyWithPlay = async (plan) => {
+    try {
+      const offerings = await Purchases.getOfferings();
+      const cur = offerings.current;
+      if(!cur){ alert("Plans unavailable, please try later."); return; }
+      const pkgId = plan==="business" ? "business_monthly" : "$rc_monthly";
+      const pkg = cur.availablePackages.find(p=>p.identifier===pkgId);
+      if(!pkg){ alert("Plan not found."); return; }
+      const { customerInfo } = await Purchases.purchasePackage({ aPackage: pkg });
+      const ents = customerInfo.entitlements.active || {};
+      const newPlan = ents.business ? "business" : (ents.personal ? "personal" : null);
+      if(newPlan && auth.currentUser){
+        await setDoc(doc(dbFs,"users",auth.currentUser.uid), { plan: newPlan, source: "play" }, { merge: true });
+        setUpgrade(null);
+      }
+    } catch(e) {
+      if(!e.userCancelled) alert("Purchase failed: " + (e.message||e));
+    }
+  };
   const plan    = PLANS[user?.plan||"free"];
   const isPro   = user?.plan==="personal"||user?.plan==="business";
   const hasCorp = user?.plan==="business";
@@ -755,6 +775,7 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   },[]);
 
   useEffect(()=>{
+    if(isNative) return;
     const initPaddle = () => {
       if(window.Paddle && !window.__paddleInitialized) {
         window.Paddle.Initialize({
@@ -1085,7 +1106,7 @@ const data = snap.exists() ? snap.data() : {};
               <div style={{marginTop:8,display:"inline-flex",padding:"3px 10px",borderRadius:100,background:isPro?"linear-gradient(135deg,#E84D0E,#F97316)":"#F3F3F1",color:isPro?"#fff":"#888",fontSize:11,fontWeight:700}}>{planLabel} Plan{isPro?"":" · "+monthUsed+"/"+FREE_LIMIT+" used"}</div>
             </div>
             {!isStandalone()&&!isNative&&<button className="btn" onClick={handleInstallClick} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#111",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>📲 Install App</button>}
-            {!isPro&&!isNative&&<button className="btn" onClick={()=>{setShowP(false);setUpgrade("corp");}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#E84D0E",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>⭐ Upgrade to Pro</button>}
+            {!isPro&&<button className="btn" onClick={()=>{setShowP(false);setUpgrade("corp");}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#E84D0E",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>⭐ Upgrade to Pro</button>}
             {isPro&&<button className="btn" onClick={handleManageSubscription} disabled={portalLoading} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#555",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>{portalLoading?"Loading…":"⚙️ Manage Subscription"}</button>}
             {isGuest
               ? <button className="btn" onClick={()=>{setShowP(false);onGoAuth();}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#555",background:"none",borderRadius:8}}>📧 Sign Up / Sign In</button>
@@ -1240,6 +1261,7 @@ const data = snap.exists() ? snap.data() : {};
       {upgrade&&<UpgradeModal reason={upgrade} isGuest={isGuest} onClose={()=>setUpgrade(null)} onSignUp={()=>{setUpgrade(null);onGoAuth();}} onUpgrade={(plan)=>{
   if(!auth.currentUser){setUpgrade(null);onGoAuth();return;}
   track("begin_checkout", { plan });
+  if(isNative){ buyWithPlay(plan); return; }
   if(!window.Paddle){ alert("Payment system is still loading — please try again in a moment."); return; }
   const priceId = plan==="business" ? PADDLE_PRICE_BUSINESS : PADDLE_PRICE_PERSONAL;
   window.Paddle.Checkout.open({
@@ -1581,9 +1603,21 @@ export default function App() {
   const [state, setState] = useState("loading"); // loading | auth | app
   const [user,  setUser]  = useState(null);
 
+
+  const initRevenueCat = async (uid) => {
+    try {
+      await Purchases.configure({ apiKey: RC_API_KEY, appUserID: uid });
+      const { customerInfo } = await Purchases.getCustomerInfo();
+      const ents = customerInfo.entitlements.active || {};
+      const rcPlan = ents.business ? "business" : (ents.personal ? "personal" : null);
+      if(rcPlan) await setDoc(doc(dbFs,"users",uid), { plan: rcPlan, source: "play" }, { merge: true });
+    } catch(e) { console.error("RevenueCat init failed", e); }
+  };
+
   useEffect(()=>{
     const unsub = onAuthStateChanged(auth, (fbUser)=>{
       if(fbUser) {
+        if(isNative) initRevenueCat(fbUser.uid);
         onSnapshot(doc(dbFs,"users",fbUser.uid),(snap)=>{
           const data = snap.exists() ? snap.data() : {};
           setUser(u=>({
