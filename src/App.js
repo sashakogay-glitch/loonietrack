@@ -833,6 +833,10 @@ const data = snap.exists() ? snap.data() : {};
   };
 
   const handleManageSubscription = async () => {
+    if(isNative || user?.source === "play"){
+      window.open("https://play.google.com/store/account/subscriptions?package=ca.loonietrack.app", "_system");
+      return;
+    }
     if(!auth.currentUser) return;
     setPortalLoading(true);
     try {
@@ -1627,6 +1631,7 @@ export default function App() {
             name: fbUser.displayName || (fbUser.email?fbUser.email.split("@")[0]:"User"),
             contact: fbUser.email,
             plan: data.plan || "free",
+            source: data.source || null,
           }));
           setState("app");
         });
