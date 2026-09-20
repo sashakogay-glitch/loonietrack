@@ -1614,7 +1614,14 @@ export default function App() {
       const { customerInfo } = await Purchases.getCustomerInfo();
       const ents = customerInfo.entitlements.active || {};
       const rcPlan = ents.business ? "business" : (ents.personal ? "personal" : null);
-      if(rcPlan) await setDoc(doc(dbFs,"users",uid), { plan: rcPlan, source: "play" }, { merge: true });
+      if(rcPlan){
+        await setDoc(doc(dbFs,"users",uid), { plan: rcPlan, source: "play" }, { merge: true });
+      } else {
+        const snap = await getDoc(doc(dbFs,"users",uid));
+        if(snap.exists() && snap.data().source === "play" && snap.data().plan !== "free"){
+          await setDoc(doc(dbFs,"users",uid), { plan: "free" }, { merge: true });
+        }
+      }
     } catch(e) { console.error("RevenueCat init failed", e); }
   };
 
