@@ -711,6 +711,20 @@ function CameraScanner({ onCapture, onClose }) {
 // MAIN APP
 // ══════════════════════════════════════════════════════════════════════════════
 function MainApp({ user, onSignOut, onGoAuth }) {
+  const restorePurchases = async () => {
+    try {
+      const { customerInfo } = await Purchases.restorePurchases();
+      const ents = customerInfo.entitlements.active || {};
+      const newPlan = ents.business ? "business" : (ents.personal ? "personal" : null);
+      if(newPlan && auth.currentUser){
+        await setDoc(doc(dbFs,"users",auth.currentUser.uid), { plan: newPlan, source: "play" }, { merge: true });
+        alert("Subscription restored.");
+      } else {
+        alert("No active subscription found.");
+      }
+    } catch(e) { alert("Restore failed: " + (e.message||e)); }
+  };
+
   const buyWithPlay = async (plan) => {
     try {
       const offerings = await Purchases.getOfferings();
@@ -1111,6 +1125,7 @@ const data = snap.exists() ? snap.data() : {};
             </div>
             {!isStandalone()&&!isNative&&<button className="btn" onClick={handleInstallClick} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#111",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>📲 Install App</button>}
             {!isPro&&<button className="btn" onClick={()=>{setShowP(false);setUpgrade("corp");}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#E84D0E",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>⭐ Upgrade to Pro</button>}
+            {isNative&&<button className="btn" onClick={()=>{setShowP(false);restorePurchases();}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#888",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>Restore purchases</button>}
             {isPro&&<button className="btn" onClick={handleManageSubscription} disabled={portalLoading} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#555",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>{portalLoading?"Loading…":"⚙️ Manage Subscription"}</button>}
             {isGuest
               ? <button className="btn" onClick={()=>{setShowP(false);onGoAuth();}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#555",background:"none",borderRadius:8}}>📧 Sign Up / Sign In</button>
