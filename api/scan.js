@@ -1,3 +1,40 @@
+const DAILY_SCAN_LIMIT = 50;
+
+async function getFirestoreAccessToken() {
+  const { GoogleAuth } = require("google-auth-library");
+  const auth = new GoogleAuth({
+    credentials: {
+      client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      private_key: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+    },
+    scopes: ["https://www.googleapis.com/auth/datastore"],
+  });
+  const client = await auth.getClient();
+  const token = await client.getAccessToken();
+  return token.token;
+}
+
+async function checkAndCountScan(uid) {
+  if (!uid) return true;
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const token = await getFirestoreAccessToken();
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/usage/${uid}`;
+  const today = new Date().toISOString().slice(0, 10);
+  let count = 0;
+  const getRes = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (getRes.ok) {
+    const doc = await getRes.json();
+    const f = doc.fields || {};
+    if (f.day && f.day.stringValue === today) count = parseInt((f.count && f.count.integerValue) || "0", 10);
+  }
+  if (count >= DAILY_SCAN_LIMIT) return false;
+  await fetch(url + "?updateMask.fieldPaths=day&updateMask.fieldPaths=count", {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ fields: { day: { stringValue: today }, count: { integerValue: String(count + 1) } } }),
+  });
+  return true;
+}
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', 'https://localhost');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -9,6 +46,7 @@ module.exports = async function handler(req, res) {
   const authHeader = req.headers.authorization || "";
   const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
   if(!idToken) return res.status(401).json({error:"Unauthorized - please sign in"});
+  let uid = null;
 
   try {
     const verifyRes = await fetch(
@@ -16,6 +54,7 @@ module.exports = async function handler(req, res) {
       { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ idToken }) }
     );
     const verifyData = await verifyRes.json();
+    uid = verifyData.users && verifyData.users[0] && verifyData.users[0].localId;
     if(verifyData.error || !verifyData.users || !verifyData.users[0]) {
       return res.status(401).json({error:"Unauthorized - invalid session, please sign in again"});
     }
@@ -23,6 +62,10 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({error:"Unauthorized - could not verify session"});
   }
 
+  try {
+    const allowed = await checkAndCountScan(uid);
+    if (!allowed) return res.status(429).json({ error: "Daily scan limit reached. Please try again tomorrow." });
+  } catch (e) { console.error("Rate limit check failed", e); }
   const key = process.env.ANTHROPIC_API_KEY || "";
   const { b64, mime, type } = req.body || {};
   if(!b64) return res.status(400).json({error:"No image data"});
