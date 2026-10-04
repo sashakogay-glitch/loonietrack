@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { auth, dbFs } from "./firebase";
-import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
+import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, sendPasswordResetEmail } from "firebase/auth";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import jsPDF from "jspdf";
@@ -240,6 +240,15 @@ function AuthScreen({ onGuest, onAuth }) {
   const [gStatus, setGStatus]= useState("sole");
   const [gProv,   setGProv]  = useState("ON");
 
+  const resetPassword = async () => {
+    if(!contact.trim()){ setErr("Enter your email above, then tap Forgot password"); return; }
+    setErr("");
+    try {
+      await sendPasswordResetEmail(auth, contact.trim());
+      alert("Password reset link sent. Check your inbox and spam folder.");
+    } catch(e) { setErr(authErrorMsg(e.code)); }
+  };
+
   const submit = async () => {
     if(mode==="signup"&&!name.trim()){setErr("Please enter your name");return;}
     if(!contact.trim()){setErr("Please enter your email");return;}
@@ -466,6 +475,12 @@ function AuthScreen({ onGuest, onAuth }) {
               <button className="btn" onClick={submit} disabled={loading} style={{width:"100%",padding:"16px",borderRadius:16,background:loading?"#E8E7E3":"linear-gradient(135deg,#E84D0E,#F97316)",color:loading?"#aaa":"#fff",fontSize:15,fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:loading?"none":"0 6px 20px rgba(232,77,14,.28)",transition:"all .2s"}}>
                 {loading?<><div style={{width:18,height:18,border:"2px solid #ddd",borderTopColor:"#aaa",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>{mode==="signup"?"Creating…":"Signing in…"}</>:mode==="signup"?"Create Free Account →":"Sign In →"}
               </button>
+
+              {mode==="signin"&&(
+                <button className="btn" onClick={resetPassword} style={{width:"100%",padding:"10px",background:"none",border:"none",color:"#888",fontSize:12.5,fontWeight:600}}>
+                  Forgot password?
+                </button>
+              )}
 
               {mode==="signup"&&(
                 <div style={{textAlign:"center",fontSize:11.5,color:"#bbb",lineHeight:1.7}}>
