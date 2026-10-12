@@ -400,6 +400,12 @@ function AuthScreen({ onGuest, onAuth }) {
         </button>
       </div>
 
+      {!isNative&&(
+        <a href="https://play.google.com/store/apps/details?id=ca.loonietrack.app" target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:14,padding:"13px",borderRadius:14,background:"#111",color:"#fff",fontSize:13,fontWeight:600,textDecoration:"none"}}>
+          Get it on Google Play
+        </a>
+      )}
+
       <div style={{marginTop:28,paddingTop:20,borderTop:"1px solid #E8E7E3",display:"flex",flexDirection:"column",gap:10}}>
         {[
           {icon:"🔐",text:"Your data is encrypted in transit and at rest"},
