@@ -9,6 +9,8 @@ import { Capacitor } from '@capacitor/core';
 const isNative = Capacitor.isNativePlatform();
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
 const RC_API_KEY = 'goog_MwWKhTJHhGTDxPPCeBZUXgxJujp';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 // ─── Firebase auth error → friendly message ────────────────────────────────────
 function authErrorMsg(code) {
@@ -761,11 +763,14 @@ function MainApp({ user, onSignOut, onGoAuth }) {
   };
   const plan    = PLANS[user?.plan||"free"];
   const isPro   = user?.plan==="personal"||user?.plan==="business";
-  const hasCorp = user?.plan==="business";
+  const isBusiness = user?.plan==="business";
   const isGuest = !user?.id;
 
   const [tab,     setTab]   = useState("home");
   const [txns,    setTxns]  = useState([]);
+  const CORP_TRIAL = 10;
+  const corpUsed = txns.filter(t=>t.type==="corp").length;
+  const hasCorp = isBusiness || corpUsed < CORP_TRIAL;
   const [ready,   setRdy]   = useState(false);
   const [scanning,setScan]  = useState(false);
   const [preview, setPrev]  = useState(null);
@@ -1002,6 +1007,7 @@ const data = snap.exists() ? snap.data() : {};
   const groups=(()=>{const g={};txns.slice(0,40).forEach(t=>{const k=fmtD(t.date||t.at);(g[k]=g[k]||[]).push(t);});return Object.entries(g).slice(0,7);})();
 
   // ── PDF export helpers ────────────────────────────────────────────────────
+  const savePdf = async (pdf, filename) => { if(!isNative){ pdf.save(filename); return; } try { const base64 = pdf.output("datauristring").split(",")[1]; const res = await Filesystem.writeFile({ path: filename, data: base64, directory: Directory.Cache }); await Share.share({ title: filename, url: res.uri, dialogTitle: "Save or send report" }); } catch(e) { alert("Could not create the report: " + (e.message || e)); } };
   const exportPersonalPDF = () => {
     const pdf = new jsPDF();
     const marginX = 14;
@@ -1049,8 +1055,8 @@ const data = snap.exists() ? snap.data() : {};
     pdf.setFontSize(9); pdf.setTextColor(185,74,26);
     pdf.text("Reference only. Consult a CPA before filing with CRA.", marginX, y);
 
-    pdf.save(`personal-tax-${yr}.pdf`);
-    setDlToast(true); setTimeout(()=>setDlToast(false),2000);
+    savePdf(pdf, `personal-tax-${yr}.pdf`);
+    if(!isNative){ setDlToast(true); setTimeout(()=>setDlToast(false),2000); }
   };
 
   const exportCorpPDF = () => {
@@ -1101,8 +1107,8 @@ const data = snap.exists() ? snap.data() : {};
     pdf.setFontSize(9); pdf.setTextColor(185,74,26);
     pdf.text("Reference only. Have an accountant review before T2 filing.", marginX, y);
 
-    pdf.save(`corp-t2-${yr}.pdf`);
-    setDlToast(true); setTimeout(()=>setDlToast(false),2000);
+    savePdf(pdf, `corp-t2-${yr}.pdf`);
+    if(!isNative){ setDlToast(true); setTimeout(()=>setDlToast(false),2000); }
   };
 
   const planColor = isPro?(hasCorp?"#4F46E5":"#E84D0E"):"#9CA3AF";
@@ -1220,7 +1226,7 @@ const data = snap.exists() ? snap.data() : {};
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,background:"#ECEAE6",borderRadius:14,padding:4,marginBottom:16}}>
               {[{id:"personal",l:"👤 Personal"},{id:"corp",l:"💼 Corp"}].map(v=>(
                 <button key={v.id} className="btn" onClick={()=>{if(v.id==="corp"&&!hasCorp){setManual(null);setUpgrade("corp");return;}setManual(m=>({...m,type:v.id,category:v.id==="corp"?"meals":"grocery"}));}} style={{padding:"10px",borderRadius:11,fontSize:12,fontWeight:700,border:"none",background:manual.type===v.id?"#fff":"none",color:manual.type===v.id?"#111":"#aaa",boxShadow:manual.type===v.id?"0 2px 8px rgba(0,0,0,.08)":"none",position:"relative"}}>
-                  {v.l}{v.id==="corp"&&!hasCorp&&<span style={{fontSize:9,background:"#E84D0E",color:"#fff",borderRadius:100,padding:"1px 5px",marginLeft:4}}>PRO</span>}
+                  {v.l}{v.id==="corp"&&!isBusiness&&<span style={{fontSize:9,background:"#E84D0E",color:"#fff",borderRadius:100,padding:"1px 5px",marginLeft:4}}>{hasCorp?(CORP_TRIAL-corpUsed)+" left":"PRO"}</span>}
                 </button>
               ))}
             </div>
@@ -1490,7 +1496,7 @@ const data = snap.exists() ? snap.data() : {};
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14,background:"#ECEAE6",borderRadius:15,padding:4}}>
               {[{id:"personal",l:"👤 Personal"},{id:"corp",l:"💼 Corporation"}].map(v=>(
                 <button key={v.id} className="btn" onClick={()=>{if(v.id==="corp"&&!hasCorp){setUpgrade("corp");return;}setRepV(v.id);}} style={{padding:"10px",borderRadius:12,fontSize:13,fontWeight:600,border:"none",background:repView===v.id?"#fff":"none",color:repView===v.id?"#111":"#aaa",boxShadow:repView===v.id?"0 2px 8px rgba(0,0,0,.08)":"none",position:"relative"}}>
-                  {v.l}{v.id==="corp"&&!hasCorp&&<span style={{fontSize:9,background:"#E84D0E",color:"#fff",borderRadius:100,padding:"1px 5px",marginLeft:4}}>PRO</span>}
+                  {v.l}{v.id==="corp"&&!isBusiness&&<span style={{fontSize:9,background:"#E84D0E",color:"#fff",borderRadius:100,padding:"1px 5px",marginLeft:4}}>{hasCorp?(CORP_TRIAL-corpUsed)+" left":"PRO"}</span>}
                 </button>
               ))}
             </div>
@@ -1576,7 +1582,7 @@ const data = snap.exists() ? snap.data() : {};
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:18,background:"#ECEAE6",borderRadius:15,padding:4}}>
               {[{id:"personal",l:"👤 Personal T1"},{id:"corp",l:"💼 Corp T2"}].map(v=>(
                 <button key={v.id} className="btn" onClick={()=>{if(v.id==="corp"&&!hasCorp){setUpgrade("corp");return;}setTaxV(v.id);}} style={{padding:"10px",borderRadius:12,fontSize:12,fontWeight:700,border:"none",background:taxView===v.id?"#fff":"none",color:taxView===v.id?"#111":"#aaa",boxShadow:taxView===v.id?"0 2px 8px rgba(0,0,0,.08)":"none",position:"relative"}}>
-                  {v.l}{v.id==="corp"&&!hasCorp&&<span style={{fontSize:9,background:"#E84D0E",color:"#fff",borderRadius:100,padding:"1px 5px",marginLeft:4}}>PRO</span>}
+                  {v.l}{v.id==="corp"&&!isBusiness&&<span style={{fontSize:9,background:"#E84D0E",color:"#fff",borderRadius:100,padding:"1px 5px",marginLeft:4}}>{hasCorp?(CORP_TRIAL-corpUsed)+" left":"PRO"}</span>}
                 </button>
               ))}
             </div>
