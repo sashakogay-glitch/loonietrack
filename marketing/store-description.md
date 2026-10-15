@@ -31,7 +31,7 @@ Most expense trackers were made for somewhere else. They do not know what an HST
 
 FREE AND PRO
 
-Free: 10 receipts a month, personal expenses, basic categories.
+Free: 10 receipts a month, personal expenses, and your first 10 corporate receipts to try business tracking.
 Pro Personal: unlimited receipts, full T1 reports, export for your accountant.
 Pro Business: everything above, plus corporate expenses, T2 reports and HST ITC tracking.
 
