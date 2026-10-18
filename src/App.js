@@ -1002,7 +1002,7 @@ const data = snap.exists() ? snap.data() : {};
   const allYr=txns.filter(t=>parseDate(t.date||t.at).getFullYear()===yr);
   const persYr=allYr.filter(t=>t.type!=="corp"),corpYr=allYr.filter(t=>t.type==="corp");
   const medTotal=persYr.filter(t=>t.taxTag==="medical").reduce((s,t)=>s+(t.amount||0),0);
-  const medThreshold=60000*0.03,medClaimable=Math.max(0,medTotal-medThreshold);
+
   const donTotal=persYr.filter(t=>t.taxTag==="donations").reduce((s,t)=>s+(t.amount||0),0);
   const donCredit=donTotal>0?Math.min(donTotal,200)*0.15+Math.max(0,donTotal-200)*0.29:0;
   const chdTotal=persYr.filter(t=>t.taxTag==="childcare").reduce((s,t)=>s+(t.amount||0),0);
@@ -1042,9 +1042,9 @@ const data = snap.exists() ? snap.data() : {};
 
     section("Medical Expenses", "Line 33099", [
       ["Total paid", fmt(medTotal)],
-      ["3% threshold", `-${fmt(medThreshold)}`],
-      ["Claimable amount", fmt(medClaimable)],
-      ["Est. credit (~15%)", fmt(medClaimable*0.15)],
+
+
+
     ]);
 
     section("Donations", "Line 34900", [
@@ -1595,13 +1595,13 @@ const data = snap.exists() ? snap.data() : {};
 
             {taxView==="personal"&&(
               <>
-                {[{label:"🏥 Medical Expenses",line:"Line 33099",total:medTotal,claimable:medClaimable,credit:medClaimable*0.15,threshold:medThreshold,type:"med"},{label:"❤️ Donations",line:"Line 34900",total:donTotal,claimable:donCredit,credit:donCredit,type:"don"},{label:"👶 Childcare",line:"Line 21400 · T778",total:chdTotal,claimable:chdTotal,credit:null,type:"chd"}].map((item,i)=>(
+                {[{label:"🏥 Medical Expenses",line:"Line 33099",total:medTotal,claimable:medTotal,credit:null,type:"med"},{label:"❤️ Donations",line:"Line 34900",total:donTotal,claimable:donCredit,credit:donCredit,type:"don"},{label:"👶 Childcare",line:"Line 21400 · T778",total:chdTotal,claimable:chdTotal,credit:null,type:"chd"}].map((item,i)=>(
                   <div key={i} style={{background:"#fff",borderRadius:16,padding:"16px",marginBottom:10,boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
                     <div style={{display:"flex",justifyContent:"space-between",marginBottom:item.total>0&&item.type!=="chd"?10:0}}>
                       <div><div style={{fontSize:14,fontWeight:600}}>{item.label}</div><div style={{fontSize:11,color:"#E84D0E",fontWeight:700,marginTop:2}}>{item.line}</div></div>
-                      <div style={{textAlign:"right"}}><div style={{fontSize:16,fontWeight:600,color:item.claimable>0?"#111":"#ccc"}}>{fmt(item.claimable)}</div><div style={{fontSize:10,color:"#aaa"}}>{item.type==="don"?"tax credit":"claimable"}</div></div>
+                      <div style={{textAlign:"right"}}><div style={{fontSize:16,fontWeight:600,color:item.claimable>0?"#111":"#ccc"}}>{fmt(item.claimable)}</div><div style={{fontSize:10,color:"#aaa"}}>{item.type==="don"?"tax credit":item.type==="med"?"total paid":"claimable"}</div></div>
                     </div>
-                    {item.total>0&&item.type==="med"&&<div style={{background:"#F8F7F4",borderRadius:10,padding:"10px 12px",fontSize:12,color:"#555",lineHeight:1.8}}><div style={{display:"flex",justifyContent:"space-between"}}><span>Total paid</span><span style={{fontWeight:700}}>{fmt(item.total)}</span></div><div style={{display:"flex",justifyContent:"space-between"}}><span>3% threshold</span><span style={{color:"#E84D0E",fontWeight:700}}>−{fmt(item.threshold)}</span></div><div style={{borderTop:"1px solid #E8E7E3",marginTop:3,paddingTop:3,display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700}}>Claimable</span><span style={{fontWeight:700}}>{fmt(item.claimable)}</span></div><div style={{display:"flex",justifyContent:"space-between"}}><span>Est. credit ~15%</span><span style={{color:"#16A34A",fontWeight:700}}>{fmt(item.credit)}</span></div></div>}
+                    {item.total>0&&item.type==="med"&&<div style={{background:"#F8F7F4",borderRadius:10,padding:"10px 12px",fontSize:12,color:"#555",lineHeight:1.6}}>The claimable portion depends on your net income. Your accountant applies the CRA threshold.</div>}
                     {item.total>0&&item.type==="don"&&<div style={{background:"#F8F7F4",borderRadius:10,padding:"10px 12px",fontSize:12,color:"#555",lineHeight:1.8}}><div style={{display:"flex",justifyContent:"space-between"}}><span>First $200 @ 15%</span><span style={{fontWeight:700}}>{fmt(Math.min(item.total,200)*0.15)}</span></div>{item.total>200&&<div style={{display:"flex",justifyContent:"space-between"}}><span>Rest @ 29%</span><span style={{fontWeight:700}}>{fmt((item.total-200)*0.29)}</span></div>}<div style={{borderTop:"1px solid #E8E7E3",marginTop:3,paddingTop:3,display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700}}>Total credit</span><span style={{color:"#16A34A",fontWeight:700}}>{fmt(item.credit)}</span></div></div>}
                     {item.total===0&&<div style={{fontSize:12,color:"#ccc",marginTop:6}}>No receipts tagged yet</div>}
                   </div>

@@ -2,7 +2,7 @@
 
 ## Short description (80 chars max)
 
-Scan receipts, track HST, file taxes — built for Canadian self-employed
+Scan receipts, track HST, be ready to file — built for Canadian self-employed
 
 ## Full description
 
