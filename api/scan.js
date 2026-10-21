@@ -87,7 +87,7 @@ module.exports = async function handler(req, res) {
         max_tokens:400,
         messages:[{role:"user",content:[
           {type:"image",source:{type:"base64",media_type:mime||"image/jpeg",data:b64}},
-          {type:"text",text:"You are a receipt-parsing API. Today's real-world date is "+today+". Respond with ONLY a raw JSON object, no markdown, no explanation, no preamble. Format: {\"merchant\":\"store name\",\"amount\":0.00,\"hst\":0.00,\"date\":\"YYYY-MM-DD\",\"category\":\"one of: "+cat+"\",\"confidence\":85}. Read the date carefully from the receipt itself. If the year on the receipt is missing, cut off, or genuinely unreadable, use "+currentYear+" as the year (today's year) instead of guessing an older year. Never default to a year before "+currentYear+" unless the receipt clearly and explicitly shows an older year printed on it. If this is not a receipt, still respond with that exact JSON shape using your best guess and confidence:10."}
+          {type:"text",text:"You are a receipt-parsing API. Today's real-world date is "+today+". Respond with ONLY a raw JSON object, no markdown, no explanation, no preamble. Format: {\"merchant\":\"store name\",\"amount\":0.00,\"gst\":0.00,\"hst\":0.00,\"pst\":0.00,\"qst\":0.00,\"date\":\"YYYY-MM-DD\",\"category\":\"one of: "+cat+"\",\"confidence\":85}. Read each tax line separately, exactly as printed: gst = the GST line, hst = the HST line, pst = the PST or RST line, qst = the QST or TVQ line. Use 0 for any tax line that is not printed on the receipt. Never split or invent a combined tax total, and never put the same amount in two fields. Read the date carefully from the receipt itself. If the year on the receipt is missing, cut off, or genuinely unreadable, use "+currentYear+" as the year (today's year) instead of guessing an older year. Never default to a year before "+currentYear+" unless the receipt clearly and explicitly shows an older year printed on it. If this is not a receipt, still respond with that exact JSON shape using your best guess and confidence:10."}
         ]}]
       })
     });
@@ -99,7 +99,10 @@ module.exports = async function handler(req, res) {
     if(!match) return res.status(500).json({error:"No JSON found in response: " + txt.slice(0,150)});
     try {
       const parsed = JSON.parse(match[0]);
-      return res.status(200).json(parsed);
+      const num = v => (typeof v === "number" && isFinite(v)) ? v : 0;
+      // GST, HST and QST are recoverable as ITC/ITR. PST and RST are not.
+      const claimable = num(parsed.gst) + num(parsed.hst) + num(parsed.qst);
+      return res.status(200).json({ ...parsed, hst: claimable, pstAmt: num(parsed.pst), taxSplit: true });
     } catch(parseErr) {
       return res.status(500).json({error:"JSON parse failed: " + match[0].slice(0,150)});
     }

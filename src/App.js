@@ -931,7 +931,7 @@ const data = snap.exists() ? snap.data() : {};
 
   const addTxn = async (d) => {
     if(!isPro && monthUsed>=FREE_LIMIT){ setUpgrade("limit"); return; }
-    d = { ...d, amount: d.amount==null||isNaN(d.amount)?0:d.amount, hst: d.hst==null||isNaN(d.hst)?0:d.hst };
+    d = { ...d, amount: d.amount==null||isNaN(d.amount)?0:d.amount, hst: d.hst==null||isNaN(d.hst)?0:d.hst, pstAmt: d.pstAmt==null||isNaN(d.pstAmt)?0:d.pstAmt, taxSplit: !!d.taxSplit };
     let imgUrl = null;
     if(d.img && user?.uid) {
       try {
@@ -978,7 +978,7 @@ const data = snap.exists() ? snap.data() : {};
     const img = preview;
     try {
       const r=await aiScan(pendFile.b64,pendFile.mime,type);
-      if((r.confidence||0)>=CONF){ await addTxn({merchant:r.merchant||"Receipt",amount:r.amount,hst:r.hst,date:r.date||new Date().toISOString().slice(0,10),category:r.category||(type==="corp"?"other_biz":"other"),taxTag:r.taxTag||"none",type,img}); setPrev(null); }
+      if((r.confidence||0)>=CONF){ await addTxn({merchant:r.merchant||"Receipt",amount:r.amount,hst:r.hst,pstAmt:r.pstAmt,taxSplit:r.taxSplit,date:r.date||new Date().toISOString().slice(0,10),category:r.category||(type==="corp"?"other_biz":"other"),taxTag:r.taxTag||"none",type,img}); setPrev(null); }
       else { setPend({data:r,sugCat:r.category||(type==="corp"?"other_biz":"other"),type,img}); }
     } catch(err) { console.error("Receipt scan failed:", err); setPend({data:{merchant:"",amount:null},sugCat:type==="corp"?"other_biz":"other",type,err:String(err),img}); }
     finally { setScan(false); setPendF(null); }
@@ -986,7 +986,7 @@ const data = snap.exists() ? snap.data() : {};
 
   const confirm = async (catId) => {
     const {data,type,img}=pending; setPend(null); setPrev(null);
-    await addTxn({merchant:data?.merchant||"Expense",amount:data?.amount,hst:data?.hst,date:data?.date||new Date().toISOString().slice(0,10),category:catId,taxTag:data?.taxTag||"none",type,img});
+    await addTxn({merchant:data?.merchant||"Expense",amount:data?.amount,hst:data?.hst,pstAmt:data?.pstAmt,taxSplit:data?.taxSplit,date:data?.date||new Date().toISOString().slice(0,10),category:catId,taxTag:data?.taxTag||"none",type,img});
   };
 
   // ── Derived ─────────────────────────────────────────────────────────────────
@@ -1006,9 +1006,10 @@ const data = snap.exists() ? snap.data() : {};
   const donTotal=persYr.filter(t=>t.taxTag==="donations").reduce((s,t)=>s+(t.amount||0),0);
   const donCredit=donTotal>0?Math.min(donTotal,200)*0.15+Math.max(0,donTotal-200)*0.29:0;
   const chdTotal=persYr.filter(t=>t.taxTag==="childcare").reduce((s,t)=>s+(t.amount||0),0);
-  const corpBycat=CORP_CATS.map(c=>{const items=corpYr.filter(t=>t.category===c.id);const gross=items.reduce((s,t)=>s+(t.amount||0),0);const hst=items.reduce((s,t)=>s+(t.hst||0),0);return {...c,gross,hst,deductible:gross*(c.deduct/100),count:items.length,items};}).filter(c=>c.gross>0);
-  const corpGrossTotal=corpBycat.reduce((s,c)=>s+c.gross,0),corpDeductTotal=corpBycat.reduce((s,c)=>s+c.deductible,0),corpHSTTotal=corpBycat.filter(c=>c.hstClaimable).reduce((s,c)=>s+c.hst,0)*(PROVINCE_TAX[province]||PROVINCE_TAX.ON).itcRatio;
-  const qData=["Q1 (Jan–Mar)","Q2 (Apr–Jun)","Q3 (Jul–Sep)","Q4 (Oct–Dec)"].map((label,qi)=>({label,hst:corpYr.filter(t=>{const m=parseDate(t.date||t.at).getMonth();return m>=qi*3&&m<qi*3+3;}).reduce((s,t)=>s+(t.hst||0),0)}));
+  const itcOf=(t)=>t.taxSplit?(t.hst||0):(t.hst||0)*(PROVINCE_TAX[province]||PROVINCE_TAX.ON).itcRatio;
+  const corpBycat=CORP_CATS.map(c=>{const items=corpYr.filter(t=>t.category===c.id);const gross=items.reduce((s,t)=>s+(t.amount||0),0);const hst=items.reduce((s,t)=>s+itcOf(t),0);return {...c,gross,hst,deductible:gross*(c.deduct/100),count:items.length,items};}).filter(c=>c.gross>0);
+  const corpGrossTotal=corpBycat.reduce((s,c)=>s+c.gross,0),corpDeductTotal=corpBycat.reduce((s,c)=>s+c.deductible,0),corpHSTTotal=corpBycat.filter(c=>c.hstClaimable).reduce((s,c)=>s+c.hst,0);
+  const qData=["Q1 (Jan–Mar)","Q2 (Apr–Jun)","Q3 (Jul–Sep)","Q4 (Oct–Dec)"].map((label,qi)=>({label,hst:corpYr.filter(t=>{const m=parseDate(t.date||t.at).getMonth();return m>=qi*3&&m<qi*3+3;}).reduce((s,t)=>s+itcOf(t),0)}));
   const bar6=Array.from({length:6},(_,i)=>{const d=new Date();d.setMonth(d.getMonth()-(5-i));const m=d.getMonth(),y=d.getFullYear();return {month:d.toLocaleDateString("en-CA",{month:"short"}),total:txns.filter(t=>{const td=parseDate(t.date||t.at);return td.getMonth()===m&&td.getFullYear()===y;}).reduce((s,t)=>s+(t.amount||0),0)};});
   const groups=(()=>{const g={};txns.slice(0,40).forEach(t=>{const k=fmtD(t.date||t.at);(g[k]=g[k]||[]).push(t);});return Object.entries(g).slice(0,7);})();
 
@@ -1294,7 +1295,7 @@ const data = snap.exists() ? snap.data() : {};
                   <div key={t.id} onClick={()=>t.img&&setViewImg(t.img)} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 0",borderBottom:i<items.length-1?"1px solid #F0EFEC":"none",cursor:t.img?"pointer":"default"}}>
                     {t.img&&<img src={t.img} alt="" style={{width:36,height:36,borderRadius:10,objectFit:"cover",flexShrink:0,border:"1px solid #F0EFEC"}}/>}
                     <div style={{flex:1}}><div style={{fontSize:14,fontWeight:600}}>{t.merchant||c.label}</div><div style={{fontSize:12,color:"#aaa",marginTop:1}}>{fmtD(t.date||t.at)}</div></div>
-                    <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:600}}>{fmt(t.amount)}</div>{t.hst>0&&<div style={{fontSize:11,color:"#aaa",marginTop:1}}>{taxLabel(province)} {fmt(t.hst)}</div>}</div>
+                    <div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:600}}>{fmt(t.amount)}</div>{((t.hst||0)+(t.pstAmt||0))>0&&<div style={{fontSize:11,color:"#aaa",marginTop:1}}>{taxLabel(province)} {fmt((t.hst||0)+(t.pstAmt||0))}</div>}</div>
                     <button className="btn" onClick={async(e)=>{e.stopPropagation();await del(t.id);setDrill(d=>({...d}));}} style={{background:"none",color:"#ddd",fontSize:18,padding:"2px 6px"}}>×</button>
                   </div>
                 ))}
@@ -1450,7 +1451,7 @@ const data = snap.exists() ? snap.data() : {};
                       </div>
                       <div style={{textAlign:"right",flexShrink:0}}>
                         <div style={{fontSize:14,fontWeight:600}}>{fmt(t.amount)}</div>
-                        {t.hst>0&&<div style={{fontSize:10,color:isCorp?"#4338CA":"#bbb",marginTop:1}}>{taxLabel(province)} {fmt(t.hst)}</div>}
+                        {((t.hst||0)+(t.pstAmt||0))>0&&<div style={{fontSize:10,color:isCorp?"#4338CA":"#bbb",marginTop:1}}>{taxLabel(province)} {fmt((t.hst||0)+(t.pstAmt||0))}</div>}
                       </div>
                       <button className="btn" onClick={(e)=>{e.stopPropagation();del(t.id);}} style={{background:"none",color:"#ddd",fontSize:18,padding:"2px 4px"}}>×</button>
                     </div>
@@ -1552,7 +1553,7 @@ const data = snap.exists() ? snap.data() : {};
                   <div style={{fontSize:20,fontWeight:700,letterSpacing:'-.2px'}}>{fmt(pTotalC)}</div>
                   <div style={{display:"flex",gap:16,marginTop:8}}>
                     <div><div style={{fontSize:10,color:"#4338CA"}}>DEDUCTIBLE</div><div style={{fontSize:14,fontWeight:600,color:"#4338CA"}}>{fmt(inPC.reduce((s,t)=>{const c=ccat(t.category);return s+(t.amount||0)*(c.deduct/100);},0))}</div></div>
-                    <div><div style={{fontSize:10,color:"#4338CA"}}>{taxLabel(province)} ITC</div><div style={{fontSize:14,fontWeight:600,color:"#4338CA"}}>{fmt(inPC.reduce((s,t)=>{const c=ccat(t.category);return c.hstClaimable?s+(t.hst||0):s;},0)*(PROVINCE_TAX[province]||PROVINCE_TAX.ON).itcRatio)}</div></div>
+                    <div><div style={{fontSize:10,color:"#4338CA"}}>{taxLabel(province)} ITC</div><div style={{fontSize:14,fontWeight:600,color:"#4338CA"}}>{fmt(inPC.reduce((s,t)=>{const c=ccat(t.category);return c.hstClaimable?s+itcOf(t):s;},0))}</div></div>
                   </div>
                 </div>
                 <div style={{background:"#fff",borderRadius:16,padding:"18px",boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
