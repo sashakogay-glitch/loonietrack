@@ -43,6 +43,10 @@
       </array>
     </dict>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>LoonieTrack uses the camera so you can photograph a receipt and have its details filled in for you.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>LoonieTrack needs access to your photos so you can add a receipt you have already saved.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

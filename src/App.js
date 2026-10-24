@@ -8,7 +8,7 @@ import jsPDF from "jspdf";
 import { Capacitor } from '@capacitor/core';
 const isNative = Capacitor.isNativePlatform();
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
-const RC_API_KEY = 'goog_MwWKhTJHhGTDxPPCeBZUXgxJujp';
+const RC_API_KEY = Capacitor.getPlatform() === 'ios' ? 'appl_EfNbxOvugOdXjqWQrPcyFprDPSd' : 'goog_MwWKhTJHhGTDxPPCeBZUXgxJujp';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 
@@ -873,6 +873,7 @@ const data = snap.exists() ? snap.data() : {};
   };
 
   const handleManageSubscription = async () => {
+    if(Capacitor.getPlatform() === "ios"){ window.open("https://apps.apple.com/account/subscriptions", "_system"); return; }
     if(isNative || user?.source === "play"){
       window.open("https://play.google.com/store/account/subscriptions?package=ca.loonietrack.app", "_system");
       return;
