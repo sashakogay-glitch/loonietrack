@@ -6,12 +6,10 @@
     integrations:
       app_store_connect: AppStoreKey
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: ca.loonietrack.app
       vars:
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
+        BUNDLE_ID: "ca.loonietrack.app"
         APP_STORE_APPLE_ID: 6825321164
       node: 20
       xcode: latest
@@ -23,7 +21,11 @@
       - name: Sync Capacitor
         script: npx cap sync ios
       - name: Set up code signing
-        script: xcode-project use-profiles
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
       - name: Set build number
         script: |
           cd ios/App
