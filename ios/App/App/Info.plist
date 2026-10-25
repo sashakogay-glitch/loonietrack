@@ -43,6 +43,8 @@
       </array>
     </dict>
 	</dict>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>LoonieTrack uses the camera so you can photograph a receipt and have its details filled in for you.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
