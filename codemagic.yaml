@@ -1,4 +1,4 @@
-﻿workflows:
+workflows:
   ios-release:
     name: LoonieTrack iOS
     instance_type: mac_mini_m2
@@ -11,7 +11,7 @@
         XCODE_SCHEME: "App"
         BUNDLE_ID: "ca.loonietrack.app"
         APP_STORE_APPLE_ID: 6825321164
-      node: 20
+      node: 22
       xcode: latest
     scripts:
       - name: Install dependencies
