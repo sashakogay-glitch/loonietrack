@@ -6,6 +6,8 @@ workflows:
     integrations:
       app_store_connect: AppStoreKey
     environment:
+      groups:
+        - appstore
       vars:
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
@@ -23,7 +25,6 @@ workflows:
       - name: Set up code signing
         script: |
           keychain initialize
-          app-store-connect create-certificate --type IOS_DISTRIBUTION --save
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           keychain add-certificates
           xcode-project use-profiles
