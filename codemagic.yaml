@@ -1,0 +1,39 @@
+﻿workflows:
+  ios-release:
+    name: LoonieTrack iOS
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: AppStoreKey
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: ca.loonietrack.app
+      vars:
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
+        XCODE_SCHEME: "App"
+        APP_STORE_APPLE_ID: 6825321164
+      node: 20
+      xcode: latest
+    scripts:
+      - name: Install dependencies
+        script: npm ci || npm install
+      - name: Build web assets
+        script: npm run build
+      - name: Sync Capacitor
+        script: npx cap sync ios
+      - name: Set up code signing
+        script: xcode-project use-profiles
+      - name: Set build number
+        script: |
+          cd ios/App
+          agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID") + 1))
+      - name: Build ipa
+        script: xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
