@@ -83,5 +83,30 @@
         });
       }
     </script>
+  <script>
+(function(){
+  function show(t){
+    var d=document.createElement('pre');
+    d.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;z-index:99999;margin:0;background:#fff;color:#900;font:11px/1.35 monospace;padding:14px;white-space:pre-wrap;overflow:auto';
+    d.textContent=t;
+    (document.body||document.documentElement).appendChild(d);
+  }
+  setTimeout(function(){
+    var root=document.getElementById('root');
+    if(root && root.childElementCount>0) return;
+    var src=null, list=document.querySelectorAll('script[src]');
+    for(var i=0;i<list.length;i++){ if(list[i].src.indexOf('/static/js/main')>-1) src=list[i].src; }
+    var out='UA: '+navigator.userAgent+'\nURL: '+location.href+'\nbundle: '+src+'\nindexedDB: '+(typeof indexedDB)+'\n';
+    try{ localStorage.setItem('t','1'); out+='localStorage: ok\n'; }catch(e){ out+='localStorage: FAIL '+e+'\n'; }
+    if(!src){ show(out+'\nmain bundle not found'); return; }
+    fetch(src).then(function(r){ return r.text(); }).then(function(code){
+      out+='bundle bytes: '+code.length+'\n\n';
+      try { (0,eval)(code); out+='eval: no error'; }
+      catch(e){ out+='EVAL ERROR\n'+((e&&(e.stack||e.message))||e); }
+      show(out);
+    }).catch(function(e){ show(out+'\nfetch failed: '+e); });
+  }, 2500);
+})();
+</script>
   </body>
 </html>
