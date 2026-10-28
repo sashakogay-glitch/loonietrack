@@ -3,7 +3,8 @@
   "appName": "LoonieTrack",
   "webDir": "build",
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "iosScheme": "https"
   },
   "android": {
     "allowMixedContent": false
