@@ -6,9 +6,10 @@ import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import jsPDF from "jspdf";
 import { Capacitor } from '@capacitor/core';
-const isNative = Capacitor.isNativePlatform();
+let isNative = false; try { isNative = Capacitor.isNativePlatform(); } catch(e) {}
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
-const RC_API_KEY = Capacitor.getPlatform() === 'ios' ? 'appl_EfNbxOvugOdXjqWQrPcyFprDPSd' : 'goog_MwWKhTJHhGTDxPPCeBZUXgxJujp';
+let RC_PLATFORM = ''; try { RC_PLATFORM = Capacitor.getPlatform(); } catch(e) {}
+const RC_API_KEY = RC_PLATFORM === 'ios' ? 'appl_EfNbxOvugOdXjqWQrPcyFprDPSd' : 'goog_MwWKhTJHhGTDxPPCeBZUXgxJujp';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 

@@ -1,4 +1,4 @@
-﻿import { initializeApp } from "firebase/app";
+import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { initializeFirestore, persistentLocalCache, persistentSingleTabManager } from "firebase/firestore";
 import { Capacitor } from "@capacitor/core";
@@ -16,7 +16,8 @@ export const app  = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
 function makeDb() {
-  if (Capacitor.getPlatform() !== "ios") {
+  var plat = ""; try { plat = Capacitor.getPlatform(); } catch (e) {}
+  if (plat !== "ios") {
     try {
       return initializeFirestore(app, {
         localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
