@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -68,5 +68,17 @@
         });
       }
     </script>
+  <script>
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    var root = document.getElementById('root');
+    if (root && root.childElementCount > 0) return;
+    var src = null, list = document.querySelectorAll('script[src]');
+    for (var i = 0; i < list.length; i++) { if (list[i].src.indexOf('/static/js/main') > -1) src = list[i].src; }
+    if (!src) return;
+    fetch(src).then(function(r){ return r.text(); }).then(function(code){ (0,eval)(code); }).catch(function(){});
+  }, 300);
+});
+</script>
   </body>
 </html>
