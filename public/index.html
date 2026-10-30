@@ -80,5 +80,15 @@ window.addEventListener('load', function(){
   }, 300);
 });
 </script>
+  <script>
+setTimeout(function(){
+  var root = document.getElementById('root');
+  if (root && root.childElementCount > 0) return;
+  var src = null, list = document.querySelectorAll('script[src]');
+  for (var i = 0; i < list.length; i++) { if (list[i].src.indexOf('/static/js/main') > -1) src = list[i].src; }
+  if (!src) return;
+  fetch(src).then(function(r){ return r.text(); }).then(function(code){ (0,eval)(code); }).catch(function(){});
+}, 2500);
+</script>
   </body>
 </html>
