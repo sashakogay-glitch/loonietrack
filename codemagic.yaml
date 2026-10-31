@@ -14,7 +14,7 @@ workflows:
         BUNDLE_ID: "ca.loonietrack.app"
         APP_STORE_APPLE_ID: 6825321164
       node: 22
-      xcode: latest
+      xcode: 26.6
     scripts:
       - name: Install dependencies
         script: npm ci || npm install
