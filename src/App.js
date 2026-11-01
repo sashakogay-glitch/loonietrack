@@ -285,7 +285,7 @@ function AuthScreen({ onGuest, onAuth }) {
       <style>{SHARED_CSS}</style>
 
       {/* Header — same as home nav */}
-      <div style={{width:"100%",background:"rgba(245,244,240,.96)",backdropFilter:"blur(22px)",borderBottom:"1px solid #E8E7E3",padding:"14px 20px",display:"flex",alignItems:"center",gap:8}}>
+      <div style={{width:"100%",background:"rgba(245,244,240,.96)",backdropFilter:"blur(22px)",borderBottom:"1px solid #E8E7E3",padding:"calc(14px + env(safe-area-inset-top)) 20px 14px",display:"flex",alignItems:"center",gap:8}}>
         <LoonieIcon size={26}/>
         <span style={{fontSize:16,fontWeight:600,letterSpacing:"-.3px"}}>LoonieTrack</span>
         <span style={{fontSize:10,color:"#aaa",marginTop:2,display:"inline-flex",alignItems:"center",gap:4}}><CanadaFlag size={13}/> Canada</span>
@@ -1128,7 +1128,7 @@ const data = snap.exists() ? snap.data() : {};
       <style>{SHARED_CSS}</style>
 
       {/* ── TOP NAV ─────────────────────────────────────────────── */}
-      <div style={{position:"fixed",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:"rgba(245,244,240,.96)",backdropFilter:"blur(22px)",borderBottom:"1px solid #E8E7E3",display:"flex",alignItems:"center",padding:"10px 14px",zIndex:100,gap:4}}>
+      <div style={{position:"fixed",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:"rgba(245,244,240,.96)",backdropFilter:"blur(22px)",borderBottom:"1px solid #E8E7E3",display:"flex",alignItems:"center",padding:"calc(10px + env(safe-area-inset-top)) 14px 10px",zIndex:100,gap:4}}>
         <div style={{display:"flex",alignItems:"center",gap:7,marginRight:"auto"}}>
           <LoonieIcon size={22}/>
           <span style={{fontSize:14,fontWeight:600,letterSpacing:"-.3px"}}>LoonieTrack</span>
@@ -1147,7 +1147,7 @@ const data = snap.exists() ? snap.data() : {};
       {showProf&&(
         <>
           <div style={{position:"fixed",inset:0,zIndex:190}} onClick={()=>setShowP(false)}/>
-          <div style={{position:"fixed",top:58,right:Math.max(0,(window.innerWidth-430)/2)+8,zIndex:200,background:"#fff",borderRadius:16,padding:"8px",boxShadow:"0 8px 32px rgba(0,0,0,.12)",border:"1px solid #E8E7E3",minWidth:210,animation:"fadeIn .15s"}}>
+          <div style={{position:"fixed",top:"calc(58px + env(safe-area-inset-top))",right:Math.max(0,(window.innerWidth-430)/2)+8,zIndex:200,background:"#fff",borderRadius:16,padding:"8px",boxShadow:"0 8px 32px rgba(0,0,0,.12)",border:"1px solid #E8E7E3",minWidth:210,animation:"fadeIn .15s"}}>
             <div style={{padding:"12px 14px 10px",borderBottom:"1px solid #F0EFEC"}}>
               <div style={{fontSize:14,fontWeight:600}}>{isGuest?"Guest":(user.name||"User")}</div>
               <div style={{fontSize:12,color:"#aaa",marginTop:2}}>{isGuest?"No account":user.contact}</div>
@@ -1410,7 +1410,7 @@ const data = snap.exists() ? snap.data() : {};
       )}
 
       {/* ── CONTENT ─────────────────────────────────────────────── */}
-      <div style={{paddingTop:56,paddingBottom:20}}>
+      <div style={{paddingTop:"calc(56px + env(safe-area-inset-top))",paddingBottom:20}}>
 
         {/* ══ HOME ══ */}
         {tab==="home"&&(
