@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, initializeAuth, indexedDBLocalPersistence } from "firebase/auth";
 import { initializeFirestore, persistentLocalCache, persistentSingleTabManager } from "firebase/firestore";
 import { Capacitor } from "@capacitor/core";
 
@@ -12,11 +12,23 @@ const firebaseConfig = {
   appId: "1:286133198930:web:3e39cf0ed4e28f9f1e3f8b"
 };
 
-export const app  = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+export const app = initializeApp(firebaseConfig);
+
+let plat = "";
+try { plat = Capacitor.getPlatform(); } catch (e) {}
+
+function makeAuth() {
+  if (plat === "ios") {
+    try {
+      return initializeAuth(app, { persistence: indexedDBLocalPersistence });
+    } catch (e) {}
+  }
+  return getAuth(app);
+}
+
+export const auth = makeAuth();
 
 function makeDb() {
-  var plat = ""; try { plat = Capacitor.getPlatform(); } catch (e) {}
   if (plat !== "ios") {
     try {
       return initializeFirestore(app, {
