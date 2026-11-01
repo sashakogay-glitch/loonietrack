@@ -10,7 +10,7 @@
   },
   "plugins": {
     "Keyboard": {
-      "resize": "body"
+      "resize": "native"
     },
     "EdgeToEdge": {
       "backgroundColor": "#F5F4F0"
