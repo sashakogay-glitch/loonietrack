@@ -220,6 +220,7 @@ const SHARED_CSS = `
   .btn:active{transform:scale(.97);opacity:.85}
   input[type=date]{color-scheme:light}
   textarea{font-family:inherit}
+  input{font-size:16px !important}
   @keyframes up{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
   @keyframes sheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
   @keyframes dot{from{opacity:.2;transform:scale(.7)}to{opacity:1;transform:scale(1.3)}}
@@ -1129,9 +1130,9 @@ const data = snap.exists() ? snap.data() : {};
 
       {/* ── TOP NAV ─────────────────────────────────────────────── */}
       <div style={{position:"fixed",top:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:"rgba(245,244,240,.96)",backdropFilter:"blur(22px)",borderBottom:"1px solid #E8E7E3",display:"flex",alignItems:"center",padding:"calc(10px + env(safe-area-inset-top)) 14px 10px",zIndex:100,gap:4}}>
-        <div style={{display:"flex",alignItems:"center",gap:7,marginRight:"auto"}}>
+        <div style={{display:"flex",alignItems:"center",gap:7,marginRight:"auto",minWidth:0,overflow:"hidden"}}>
           <LoonieIcon size={22}/>
-          <span style={{fontSize:14,fontWeight:600,letterSpacing:"-.3px"}}>LoonieTrack</span>
+          <span style={{fontSize:14,fontWeight:600,letterSpacing:"-.3px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>LoonieTrack</span>
         </div>
         {[{id:"home",icon:"🏠",l:"Home"},{id:"reports",icon:"📊",l:"Reports"},{id:"tax",icon:"🍁",l:"Tax"}].map(v=>(
           <button key={v.id} className="btn" onClick={()=>setTab(v.id)} style={{display:"flex",alignItems:"center",gap:4,padding:"6px 10px",borderRadius:100,background:tab===v.id?"#111":"none",border:"none",color:tab===v.id?"#fff":"#aaa",fontFamily:"inherit",fontSize:11,fontWeight:700,transition:"all .15s"}}>
