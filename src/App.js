@@ -149,9 +149,9 @@ const CONF   = 75;
 
 // ─── Storage ───────────────────────────────────────────────────────────────────
 const db = {
-  get:    async (k) => { try { const r=await window.storage.get(k); return r?JSON.parse(r.value):null; } catch { return null; } },
-  set:    async (k,v) => { try { await window.storage.set(k,JSON.stringify(v)); } catch {} },
-  remove: async (k)   => { try { await window.storage.delete(k); } catch {} },
+  get:    async (k) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
+  set:    async (k,v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  remove: async (k)   => { try { localStorage.removeItem(k); } catch {} },
 };
 
 // ─── Period ────────────────────────────────────────────────────────────────────
