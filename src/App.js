@@ -983,12 +983,13 @@ const data = snap.exists() ? snap.data() : {};
       const r=await aiScan(pendFile.b64,pendFile.mime,type);
       if((r.confidence||0)>=CONF){ await addTxn({merchant:r.merchant||"Receipt",amount:r.amount,hst:r.hst,pstAmt:r.pstAmt,taxSplit:r.taxSplit,date:r.date||new Date().toISOString().slice(0,10),category:r.category||(type==="corp"?"other_biz":"other"),taxTag:r.taxTag||"none",type,img}); setPrev(null); }
       else { setPend({data:r,sugCat:r.category||(type==="corp"?"other_biz":"other"),type,img}); }
-    } catch(err) { console.error("Receipt scan failed:", err); setPend({data:{merchant:"",amount:null},sugCat:type==="corp"?"other_biz":"other",type,err:String(err),img}); }
+    } catch(err) { console.error("Receipt scan failed:", err); setPrev(null); setManual({type,merchant:"",amount:"",hst:"",date:new Date().toISOString().slice(0,10),category:"",taxTag:"none",img,scanFailed:true}); }
     finally { setScan(false); setPendF(null); }
   };
 
   const confirm = async (catId) => {
     const {data,type,img}=pending; setPend(null); setPrev(null);
+    if(typeof data?.amount!=="number"||!isFinite(data.amount)||data.amount<=0){ setManual({type,merchant:data?.merchant||"",amount:"",hst:"",date:data?.date||new Date().toISOString().slice(0,10),category:catId,taxTag:"none",img,scanFailed:true}); return; }
     await addTxn({merchant:data?.merchant||"Expense",amount:data?.amount,hst:data?.hst,pstAmt:data?.pstAmt,taxSplit:data?.taxSplit,date:data?.date||new Date().toISOString().slice(0,10),category:catId,taxTag:data?.taxTag||"none",type,img});
   };
 
@@ -1217,10 +1218,10 @@ const data = snap.exists() ? snap.data() : {};
             <div style={{fontSize:17,fontWeight:600,marginBottom:4}}>What was this for?</div>
             <div style={{fontSize:13,color:"#888",marginBottom:20}}>{pending.data?.merchant?`${pending.data.merchant}${pending.data.amount?` · ${fmt(pending.data.amount)}`:""}`:"Pick a category"}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              {(pending.type==="corp"?CORP_CATS:PERSONAL_CATS).map((c,i)=>(
-                <button key={c.id} className="btn" onClick={()=>confirm(c.id)} style={{padding:"13px 11px",borderRadius:14,textAlign:"left",display:"flex",alignItems:"flex-start",gap:9,background:i===0?`${c.color}12`:"#fff",border:i===0?`2px solid ${c.color}`:"2px solid transparent",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
+              {(pending.type==="corp"?CORP_CATS:PERSONAL_CATS).map((c)=>(
+                <button key={c.id} className="btn" onClick={()=>confirm(c.id)} style={{padding:"13px 11px",borderRadius:14,textAlign:"left",display:"flex",alignItems:"flex-start",gap:9,background:c.id===pending.sugCat?`${c.color}12`:"#fff",border:c.id===pending.sugCat?`2px solid ${c.color}`:"2px solid transparent",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
                   <span style={{fontSize:19}}>{c.icon}</span>
-                  <div>{i===0&&<div style={{fontSize:9,fontWeight:700,color:c.color,letterSpacing:".07em",marginBottom:1}}>SUGGESTED</div>}<div style={{fontSize:12,fontWeight:700,lineHeight:1.3}}>{c.label}</div></div>
+                  <div>{c.id===pending.sugCat&&<div style={{fontSize:9,fontWeight:700,color:c.color,letterSpacing:".07em",marginBottom:1}}>SUGGESTED</div>}<div style={{fontSize:12,fontWeight:700,lineHeight:1.3}}>{c.label}</div></div>
                 </button>
               ))}
             </div>
@@ -1233,9 +1234,10 @@ const data = snap.exists() ? snap.data() : {};
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(8px)",animation:"fadeIn .2s"}} onClick={()=>setManual(null)}/>
           <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#F5F4F0",borderRadius:"24px 24px 0 0",padding:"24px 20px 40px",maxHeight:"92vh",overflowY:"auto",animation:"sheet .25s ease"}}>
             <div style={{fontSize:19,fontWeight:600,marginBottom:16}}>✏️ Add Expense</div>
+            {manual.scanFailed&&<div style={{background:"#FFF3EE",border:"1.5px solid #FFD5C2",borderRadius:10,padding:"10px 12px",marginBottom:14,fontSize:12,color:"#B94A1A"}}>We could not read this receipt. Please enter the amount yourself so your records stay correct.</div>}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,background:"#ECEAE6",borderRadius:14,padding:4,marginBottom:16}}>
               {[{id:"personal",l:"👤 Personal"},{id:"corp",l:"💼 Corp"}].map(v=>(
-                <button key={v.id} className="btn" onClick={()=>{if(v.id==="corp"&&!hasCorp){setManual(null);setUpgrade("corp");return;}setManual(m=>({...m,type:v.id,category:v.id==="corp"?"meals":"grocery"}));}} style={{padding:"10px",borderRadius:11,fontSize:12,fontWeight:700,border:"none",background:manual.type===v.id?"#fff":"none",color:manual.type===v.id?"#111":"#aaa",boxShadow:manual.type===v.id?"0 2px 8px rgba(0,0,0,.08)":"none",position:"relative"}}>
+                <button key={v.id} className="btn" onClick={()=>{if(v.id==="corp"&&!hasCorp){setManual(null);setUpgrade("corp");return;}setManual(m=>({...m,type:v.id,category:""}));}} style={{padding:"10px",borderRadius:11,fontSize:12,fontWeight:700,border:"none",background:manual.type===v.id?"#fff":"none",color:manual.type===v.id?"#111":"#aaa",boxShadow:manual.type===v.id?"0 2px 8px rgba(0,0,0,.08)":"none",position:"relative"}}>
                   {v.l}{v.id==="corp"&&!isBusiness&&<span style={{fontSize:9,background:"#E84D0E",color:"#fff",borderRadius:100,padding:"1px 5px",marginLeft:4}}>{hasCorp?(CORP_TRIAL-corpUsed)+" left":"PRO"}</span>}
                 </button>
               ))}
@@ -1263,7 +1265,7 @@ const data = snap.exists() ? snap.data() : {};
                   </div>
                 </div>
               )}
-              <button className="btn" disabled={!manual.amount} onClick={async()=>{await addTxn({merchant:manual.merchant||"Expense",amount:parseFloat(manual.amount)||0,hst:parseFloat(manual.hst)||0,date:manual.date,category:manual.category,taxTag:manual.taxTag||"none",type:manual.type});setManual(null);}} style={{width:"100%",padding:"16px",borderRadius:14,background:manual.amount?"linear-gradient(135deg,#E84D0E,#F97316)":"#E0DFDB",color:manual.amount?"#fff":"#aaa",fontSize:14,fontWeight:600,marginTop:4}}>
+              <button className="btn" disabled={!manual.amount||!manual.category} onClick={async()=>{await addTxn({merchant:manual.merchant||"Expense",amount:parseFloat(manual.amount)||0,hst:parseFloat(manual.hst)||0,date:manual.date,category:manual.category,taxTag:manual.taxTag||"none",type:manual.type,img:manual.img});setManual(null);}} style={{width:"100%",padding:"16px",borderRadius:14,background:(manual.amount&&manual.category)?"linear-gradient(135deg,#E84D0E,#F97316)":"#E0DFDB",color:(manual.amount&&manual.category)?"#fff":"#aaa",fontSize:14,fontWeight:600,marginTop:4}}>
                 💾 Save Expense
               </button>
             </div>
@@ -1477,7 +1479,7 @@ const data = snap.exists() ? snap.data() : {};
                     <span style={{fontSize:15}}>🖼️</span>From Gallery
                   </div>
                 </label>
-                <button className="btn" onClick={()=>setManual({type:"personal",merchant:"",amount:"",hst:"",date:new Date().toISOString().slice(0,10),category:"grocery",taxTag:"none"})} style={{padding:"12px",borderRadius:14,background:"#fff",border:"1.5px solid #E5E4E0",color:"#555",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:7,boxShadow:"0 2px 8px rgba(0,0,0,.05)"}}>
+                <button className="btn" onClick={()=>setManual({type:"personal",merchant:"",amount:"",hst:"",date:new Date().toISOString().slice(0,10),category:"",taxTag:"none"})} style={{padding:"12px",borderRadius:14,background:"#fff",border:"1.5px solid #E5E4E0",color:"#555",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:7,boxShadow:"0 2px 8px rgba(0,0,0,.05)"}}>
                   <span style={{fontSize:15}}>✏️</span>Manual Entry
                 </button>
               </div>
