@@ -309,7 +309,7 @@ function AuthScreen({ onGuest, onAuth }) {
   <div style={{textAlign:"right"}}>Before April does.</div>
 </div>
         <div style={{fontSize:14,color:"#888",lineHeight:1.7}}>
-          LoonieTrack is the money app for Canadian owner-operators, tradespeople, and self-employed workers. Scan receipts, track income and HST, and know exactly what to set aside for taxes — automatically, every time you get paid. So April never surprises you.
+          LoonieTrack is the money app for Canadian owner-operators, tradespeople, and self-employed workers. Scan receipts, track expenses and HST, and see an estimate of what to set aside for taxes. So April does not catch you off guard.
         </div>
       </div>
 
@@ -378,7 +378,7 @@ function AuthScreen({ onGuest, onAuth }) {
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:24}}>
         {[
           {icon:"👤",label:"Guest",price:"Free",sub:"10 receipts/mo",color:"#9CA3AF"},
-          {icon:"⭐",label:"Personal",price:"$3.99",sub:"/month · Unlimited",color:"#E84D0E"},
+          {icon:"⭐",label:"Personal",price:"$3.99",sub:"/month · 50 scans a day",color:"#E84D0E"},
           {icon:"💼",label:"Business",price:"$7.99",sub:"Personal + Corp",color:"#4F46E5"},
         ].map((p,i)=>(
           <div key={i} style={{background:"#fff",borderRadius:16,padding:"14px 10px",textAlign:"center",boxShadow:"0 2px 12px rgba(0,0,0,.06)",border:`1.5px solid ${i===1?"rgba(232,77,14,.2)":"#E8E7E3"}`}}>
@@ -552,7 +552,7 @@ function UpgradeModal({ reason, isGuest, onClose, onSignUp, onUpgrade }) {
                 <div style={{fontSize:10,color:"#aaa"}}>/month</div>
               </div>
             </div>
-            {["Unlimited receipts","Full tax reports (T1)","Export for accountant","Personal categories"].map((f,i)=>(
+            {["Unlimited receipts, 50 scans a day","Full tax reports (T1)","Export for accountant","Personal categories"].map((f,i)=>(
               <div key={i} style={{fontSize:12,color:"#555",marginBottom:4}}>✓ {f}</div>
             ))}
             <button className="btn" onClick={()=>onUpgrade("personal")} style={{width:"100%",marginTop:12,padding:"14px",borderRadius:14,background:"linear-gradient(135deg,#E84D0E,#F97316)",color:"#fff",fontSize:14,fontWeight:600,fontFamily:"'Inter',system-ui,-apple-system,sans-serif",boxShadow:"0 4px 16px rgba(232,77,14,.3)"}}>
@@ -983,7 +983,7 @@ const data = snap.exists() ? snap.data() : {};
       const r=await aiScan(pendFile.b64,pendFile.mime,type);
       if((r.confidence||0)>=CONF){ await addTxn({merchant:r.merchant||"Receipt",amount:r.amount,hst:r.hst,pstAmt:r.pstAmt,taxSplit:r.taxSplit,date:r.date||new Date().toISOString().slice(0,10),category:r.category||(type==="corp"?"other_biz":"other"),taxTag:r.taxTag||"none",type,img}); setPrev(null); }
       else { setPend({data:r,sugCat:r.category||(type==="corp"?"other_biz":"other"),type,img}); }
-    } catch(err) { console.error("Receipt scan failed:", err); setPrev(null); setManual({type,merchant:"",amount:"",hst:"",date:new Date().toISOString().slice(0,10),category:"",taxTag:"none",img,scanFailed:true}); }
+    } catch(err) { console.error("Receipt scan failed:", err); setPrev(null); setManual({type,merchant:"",amount:"",hst:"",date:new Date().toISOString().slice(0,10),category:"",taxTag:"none",img,scanFailed:/daily scan limit/i.test(String(err))?"limit":true}); }
     finally { setScan(false); setPendF(null); }
   };
 
@@ -1214,7 +1214,7 @@ const data = snap.exists() ? snap.data() : {};
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.45)",backdropFilter:"blur(6px)",animation:"fadeIn .2s"}} onClick={()=>{setPend(null);setPrev(null);}}/>
           <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#F5F4F0",borderRadius:"24px 24px 0 0",padding:"28px 20px 44px",maxHeight:"86vh",overflowY:"auto",animation:"sheet .25s ease"}}>
             <div style={{display:"inline-flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:100,marginBottom:14,background:pending.type==="corp"?"#EEF2FF":"#FFF3EE",fontSize:12,fontWeight:700,color:pending.type==="corp"?"#4338CA":"#B94A1A"}}>{pending.type==="corp"?"💼 Corporation":"👤 Personal"}</div>
-            {pending.err&&<div style={{background:"#FFF3EE",border:"1.5px solid #FFD5C2",borderRadius:10,padding:"10px 12px",marginBottom:12,fontSize:12,color:"#B94A1A"}}>⚠️ Couldn't read this receipt automatically — no problem, just pick a category and enter the details below.</div>}
+            
             <div style={{fontSize:17,fontWeight:600,marginBottom:4}}>What was this for?</div>
             <div style={{fontSize:13,color:"#888",marginBottom:20}}>{pending.data?.merchant?`${pending.data.merchant}${pending.data.amount?` · ${fmt(pending.data.amount)}`:""}`:"Pick a category"}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
@@ -1234,7 +1234,7 @@ const data = snap.exists() ? snap.data() : {};
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(8px)",animation:"fadeIn .2s"}} onClick={()=>setManual(null)}/>
           <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#F5F4F0",borderRadius:"24px 24px 0 0",padding:"24px 20px 40px",maxHeight:"92vh",overflowY:"auto",animation:"sheet .25s ease"}}>
             <div style={{fontSize:19,fontWeight:600,marginBottom:16}}>✏️ Add Expense</div>
-            {manual.scanFailed&&<div style={{background:"#FFF3EE",border:"1.5px solid #FFD5C2",borderRadius:10,padding:"10px 12px",marginBottom:14,fontSize:12,color:"#B94A1A"}}>We could not read this receipt. Please enter the amount yourself so your records stay correct.</div>}
+            {manual.scanFailed&&<div style={{background:"#FFF3EE",border:"1.5px solid #FFD5C2",borderRadius:10,padding:"10px 12px",marginBottom:14,fontSize:12,color:"#B94A1A"}}>{manual.scanFailed==="limit"?"You have used today's 50 scans. Enter this receipt by hand now, or scan it again tomorrow.":"We could not read this receipt. Please enter the amount yourself so your records stay correct."}</div>}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,background:"#ECEAE6",borderRadius:14,padding:4,marginBottom:16}}>
               {[{id:"personal",l:"👤 Personal"},{id:"corp",l:"💼 Corp"}].map(v=>(
                 <button key={v.id} className="btn" onClick={()=>{if(v.id==="corp"&&!hasCorp){setManual(null);setUpgrade("corp");return;}setManual(m=>({...m,type:v.id,category:""}));}} style={{padding:"10px",borderRadius:11,fontSize:12,fontWeight:700,border:"none",background:manual.type===v.id?"#fff":"none",color:manual.type===v.id?"#111":"#aaa",boxShadow:manual.type===v.id?"0 2px 8px rgba(0,0,0,.08)":"none",position:"relative"}}>
