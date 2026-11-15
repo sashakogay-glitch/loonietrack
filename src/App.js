@@ -1261,12 +1261,12 @@ const data = snap.exists() ? snap.data() : {};
               {manual.type==="personal"&&(
                 <div><div style={{fontSize:10,fontWeight:700,color:"#aaa",letterSpacing:".06em",marginBottom:7}}>TAX TAG</div>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                    {TAX_TAGS.map(tg=><button key={tg.id} className="btn" onClick={()=>setManual(m=>({...m,taxTag:tg.id}))} style={{padding:"7px 13px",borderRadius:100,fontSize:12,fontWeight:700,background:manual.taxTag===tg.id?"#111":"#fff",color:manual.taxTag===tg.id?"#fff":"#888",border:"1.5px solid #E5E4E0"}}>{tg.icon} {tg.label}</button>)}
+                    {TAX_TAGS.map(tg=><button key={tg.id} className="btn" onClick={()=>setManual(m=>({...m,taxTag:tg.id,category:m.category||(tg.id==="none"?"":"other")}))} style={{padding:"7px 13px",borderRadius:100,fontSize:12,fontWeight:700,background:manual.taxTag===tg.id?"#111":"#fff",color:manual.taxTag===tg.id?"#fff":"#888",border:"1.5px solid #E5E4E0"}}>{tg.icon} {tg.label}</button>)}
                   </div>
                 </div>
               )}
               <button className="btn" disabled={!manual.amount||!manual.category} onClick={async()=>{await addTxn({merchant:manual.merchant||"Expense",amount:parseFloat(manual.amount)||0,hst:parseFloat(manual.hst)||0,date:manual.date,category:manual.category,taxTag:manual.taxTag||"none",type:manual.type,img:manual.img});setManual(null);}} style={{width:"100%",padding:"16px",borderRadius:14,background:(manual.amount&&manual.category)?"linear-gradient(135deg,#E84D0E,#F97316)":"#E0DFDB",color:(manual.amount&&manual.category)?"#fff":"#aaa",fontSize:14,fontWeight:600,marginTop:4}}>
-                💾 Save Expense
+                {!manual.amount?"Enter the amount":(!manual.category?"Pick a category":"💾 Save Expense")}
               </button>
             </div>
           </div>

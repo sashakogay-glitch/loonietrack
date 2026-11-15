@@ -11,3 +11,6 @@ android/build/
 *.jks
 *.keystore
 key.properties
+
+# Apple private keys
+*.p8
