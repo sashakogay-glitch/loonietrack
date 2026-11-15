@@ -44,19 +44,28 @@ async function deleteAllReceipts(uid, token) {
 
 async function cancelPaddleSubscription(subscriptionId) {
   if (!subscriptionId) return;
+  const base = "https://api.paddle.com";
+  const headers = {
+    "Authorization": `Bearer ${process.env.PADDLE_API_KEY}`,
+    "Content-Type": "application/json",
+  };
+  const r = await fetch(`${base}/subscriptions/${subscriptionId}/cancel`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ effective_from: "immediately" }),
+  });
+  if (r.ok) return;
+  // Cancelled earlier by the user? Then nothing is charging and deletion can go ahead.
   try {
-    const base = "https://api.paddle.com";
-    await fetch(`${base}/subscriptions/${subscriptionId}/cancel`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.PADDLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ effective_from: "immediately" }),
-    });
-  } catch (e) {
-    console.error("Paddle cancel failed (continuing with deletion):", e.message);
-  }
+    const s = await fetch(`${base}/subscriptions/${subscriptionId}`, { headers });
+    const j = await s.json();
+    if (j && j.data && j.data.status === "canceled") return;
+  } catch (e) {}
+  // Otherwise stop: deleting the account while Paddle keeps charging would leave the person
+  // paying for a service they can no longer even sign in to.
+  const err = new Error("Paddle cancel failed: " + r.status + " " + (await r.text()).slice(0, 200));
+  err.userMessage = "We could not cancel your website subscription, so nothing was deleted. Please try again, or contact hello@loonietrack.ca and we will cancel it for you.";
+  throw err;
 }
 
 async function deleteFirebaseAuthUser(uid, token) {
@@ -114,6 +123,6 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ deleted: true });
   } catch (e) {
     console.error("Account deletion error:", e.message);
-    return res.status(500).json({ error: "Something went wrong deleting your account. Please contact hello@loonietrack.ca." });
+    return res.status(500).json({ error: e.userMessage || "Something went wrong deleting your account. Please contact hello@loonietrack.ca." });
   }
 };
