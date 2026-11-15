@@ -29,23 +29,23 @@ footer{margin-top:56px;font-size:13px;color:#aaa;border-top:1px solid #E8E7E3;pa
   <div class="top"><span class="coin"></span><a href="/">LoonieTrack</a></div>
 
   <h1>Privacy Policy</h1>
-  <p class="updated">Last updated: July 26, 2026</p>
+  <p class="updated">Last updated: November 15, 2026</p>
 
-  <p>LoonieTrack ("we", "us") provides an expense-tracking and tax-reporting app for Canadian self-employed workers and small businesses, available at loonietrack.ca. This policy explains what personal information we collect, how we use it, and the choices you have. We comply with the Personal Information Protection and Electronic Documents Act (PIPEDA).</p>
+  <p>LoonieTrack ("we", "us") provides an expense-tracking and tax-reporting app for Canadian self-employed workers and small businesses, available on Android, on iPhone and at loonietrack.ca. This policy explains what personal information we collect, how we use it, and the choices you have. We comply with the Personal Information Protection and Electronic Documents Act (PIPEDA).</p>
 
   <h2>1. Information we collect</h2>
   <ul>
     <li><b>Account information</b> — your name, email address, and password (stored in hashed form by our authentication provider; we never see your actual password).</li>
     <li><b>Financial records you create</b> — expense transactions, amounts, merchants, categories, tax tags, HST amounts, your selected province, and photos of receipts you choose to upload.</li>
-    <li><b>Subscription information</b> — your plan level and Stripe customer reference. Your payment card details are collected and stored by Stripe, never by us.</li>
-    <li><b>Usage analytics</b> — anonymous usage events (such as sign-ups and page views) via Google Analytics, used to improve the product.</li>
+    <li><b>Subscription information</b> — your plan level and a subscription reference from the store or payment provider you used (Apple, Google Play or Paddle). Your payment card details are handled by them and never reach us.</li>
+    <li><b>Usage analytics</b> — anonymous usage events (such as sign-ups and page views) via Google Analytics on our website and in our Android app, used to improve the product. The iPhone app does not send analytics.</li>
   </ul>
 
   <h2>2. How we use your information</h2>
   <ul>
     <li>To provide the service: store your transactions, generate your reports, and sync your data across devices.</li>
     <li>To read receipt photos you scan: images are processed by an AI service (Anthropic) solely to extract the merchant, amount, date, and tax information. <b>Your receipt images are not used to train AI models.</b></li>
-    <li>To process subscription payments through Stripe.</li>
+    <li>To manage your subscription: payments are processed by Apple, Google Play or Paddle, and RevenueCat keeps your plan in sync across your devices.</li>
     <li>To respond to support requests you send to hello@loonietrack.ca.</li>
   </ul>
   <p>We do not sell, rent, or trade your personal information. Ever.</p>
@@ -57,9 +57,11 @@ footer{margin-top:56px;font-size:13px;color:#aaa;border-top:1px solid #E8E7E3;pa
   <h2>4. Third-party services we rely on</h2>
   <ul>
     <li><b>Google Firebase / Google Cloud</b> — authentication, database, and file storage.</li>
-    <li><b>Stripe</b> — subscription payments (PCI-DSS compliant; card data never touches our servers).</li>
+    <li><b>Apple App Store and Google Play</b> — subscription payments made in the mobile apps.</li>
+    <li><b>Paddle</b> — subscription payments made on our website.</li>
+    <li><b>RevenueCat</b> — subscription status; receives your account ID and purchase history, never your card details.</li>
     <li><b>Anthropic</b> — AI processing of receipt images you scan.</li>
-    <li><b>Google Analytics</b> — anonymous product usage statistics.</li>
+    <li><b>Google Analytics</b> — anonymous product usage statistics on our website and Android app.</li>
     <li><b>Vercel</b> — application hosting.</li>
     <li><b>Cloudflare</b> — email routing for our support address.</li>
   </ul>
@@ -71,7 +73,7 @@ footer{margin-top:56px;font-size:13px;color:#aaa;border-top:1px solid #E8E7E3;pa
   <h2>6. Your rights</h2>
   <ul>
     <li><b>Access & correction</b> — you can view and edit your data at any time inside the app.</li>
-    <li><b>Deletion</b> — you may request full deletion of your account and data by emailing <a href="mailto:hello@loonietrack.ca">hello@loonietrack.ca</a>.</li>
+    <li><b>Deletion</b> — you can delete your account and all your data yourself in the app (Delete Account in your account menu), or request deletion by emailing <a href="mailto:hello@loonietrack.ca">hello@loonietrack.ca</a>.</li>
     <li><b>Withdrawal of consent</b> — you may stop using the service and request deletion at any time.</li>
     <li><b>Complaints</b> — you may contact us first, and you also have the right to complain to the Office of the Privacy Commissioner of Canada (priv.gc.ca).</li>
   </ul>

@@ -138,6 +138,8 @@ const PLANS = {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 const gid  = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+const SITE = "https://www.loonietrack.ca";
+const openExternal = (url) => { try { if(isNative) { window.location.href = url; } else { window.open(url, "_blank", "noopener"); } } catch(e) {} };
 const track = (event, params) => { try { if(window.gtag) window.gtag("event", event, params||{}); } catch(e) {} };
 const fmt  = (n) => new Intl.NumberFormat("en-CA",{style:"currency",currency:"CAD"}).format(n||0);
 const parseDate = (d) => { if(!d) return new Date(); if(d.includes("T")) return new Date(d); return new Date(d+"T12:00:00"); };
@@ -370,7 +372,7 @@ function AuthScreen({ onGuest, onAuth }) {
           })()}
         </div>
         <div style={{textAlign:"center",fontSize:10.5,color:"#bbb",marginTop:12,lineHeight:1.5}}>
-          Rough guide only, not tax advice — sign up for your exact number.
+          Rough guide only, not tax advice. Your accountant confirms the exact amount.
         </div>
       </div>
 
@@ -420,9 +422,9 @@ function AuthScreen({ onGuest, onAuth }) {
       </div>
 
       <div style={{marginTop:20,display:"flex",justifyContent:"center",gap:14,flexWrap:"wrap"}}>
-        <a href="/terms.html" target="_blank" rel="noreferrer" style={{fontSize:11.5,color:"#bbb",textDecoration:"none"}}>Terms of Service</a>
-        <a href="/privacy.html" target="_blank" rel="noreferrer" style={{fontSize:11.5,color:"#bbb",textDecoration:"none"}}>Privacy Policy</a>
-        <a href="/refund.html" target="_blank" rel="noreferrer" style={{fontSize:11.5,color:"#bbb",textDecoration:"none"}}>Refund Policy</a>
+        <a href={SITE+"/terms.html"} onClick={e=>{e.preventDefault();openExternal(SITE+"/terms.html");}} rel="noreferrer" style={{fontSize:11.5,color:"#bbb",textDecoration:"none"}}>Terms of Service</a>
+        <a href={SITE+"/privacy.html"} onClick={e=>{e.preventDefault();openExternal(SITE+"/privacy.html");}} rel="noreferrer" style={{fontSize:11.5,color:"#bbb",textDecoration:"none"}}>Privacy Policy</a>
+        {!isNative&&<a href={SITE+"/refund.html"} onClick={e=>{e.preventDefault();openExternal(SITE+"/refund.html");}} rel="noreferrer" style={{fontSize:11.5,color:"#bbb",textDecoration:"none"}}>Refund Policy</a>}
       </div>
     </div>
   )}
@@ -495,11 +497,11 @@ function AuthScreen({ onGuest, onAuth }) {
               {mode==="signup"&&(
                 <div style={{textAlign:"center",fontSize:11.5,color:"#bbb",lineHeight:1.7}}>
                   By creating an account you agree to our{" "}
-                  <a href="/terms.html" target="_blank" rel="noreferrer" style={{color:"#E84D0E",textDecoration:"none",fontWeight:600}}>Terms of Service</a>
-                  {", "}
-                  <a href="/privacy.html" target="_blank" rel="noreferrer" style={{color:"#E84D0E",textDecoration:"none",fontWeight:600}}>Privacy Policy</a>
-                  {" "}and{" "}
-                  <a href="/refund.html" target="_blank" rel="noreferrer" style={{color:"#E84D0E",textDecoration:"none",fontWeight:600}}>Refund Policy</a>.
+                  <a href={SITE+"/terms.html"} onClick={e=>{e.preventDefault();openExternal(SITE+"/terms.html");}} rel="noreferrer" style={{color:"#E84D0E",textDecoration:"none",fontWeight:600}}>Terms of Service</a>
+                  {isNative?" and ":", "}
+                  <a href={SITE+"/privacy.html"} onClick={e=>{e.preventDefault();openExternal(SITE+"/privacy.html");}} rel="noreferrer" style={{color:"#E84D0E",textDecoration:"none",fontWeight:600}}>Privacy Policy</a>
+                  {!isNative&&<>{" "}and{" "}</>}
+                  {!isNative&&<a href={SITE+"/refund.html"} onClick={e=>{e.preventDefault();openExternal(SITE+"/refund.html");}} rel="noreferrer" style={{color:"#E84D0E",textDecoration:"none",fontWeight:600}}>Refund Policy</a>}.
                 </div>
               )}
 
@@ -582,6 +584,7 @@ function UpgradeModal({ reason, isGuest, onClose, onSignUp, onUpgrade }) {
         </>
         </div>
         {/* Sign up option for guests */}
+        <div style={{fontSize:11,color:"#999",lineHeight:1.6,textAlign:"center",margin:"4px 4px 14px"}}>Monthly subscription. Renews automatically until cancelled; cancel anytime in {RC_PLATFORM==="ios"?"your Apple Account settings":RC_PLATFORM==="android"?"the Play Store":"your LoonieTrack account"}. Prices in CAD; sales tax may be added at checkout. <a href={SITE+"/terms.html"} onClick={e=>{e.preventDefault();openExternal(SITE+"/terms.html");}} rel="noreferrer" style={{color:"#888"}}>Terms of Use</a> · <a href={SITE+"/privacy.html"} onClick={e=>{e.preventDefault();openExternal(SITE+"/privacy.html");}} rel="noreferrer" style={{color:"#888"}}>Privacy Policy</a></div>
         {isGuest&&isLimit&&(
           <button className="btn" onClick={onSignUp} style={{width:"100%",padding:"14px",borderRadius:14,background:"#fff",border:"1.5px solid #E5E4E0",color:"#555",fontSize:14,fontWeight:600,marginBottom:10}}>
             📧 Sign up free — resets monthly limit
@@ -875,9 +878,9 @@ const data = snap.exists() ? snap.data() : {};
   };
 
   const handleManageSubscription = async () => {
-    if(Capacitor.getPlatform() === "ios"){ window.open("https://apps.apple.com/account/subscriptions", "_system"); return; }
+    if(Capacitor.getPlatform() === "ios"){ openExternal("https://apps.apple.com/account/subscriptions"); return; }
     if(isNative || user?.source === "play"){
-      window.open("https://play.google.com/store/account/subscriptions?package=ca.loonietrack.app", "_system");
+      openExternal("https://play.google.com/store/account/subscriptions?package=ca.loonietrack.app");
       return;
     }
     if(!auth.currentUser) return;
@@ -1161,7 +1164,7 @@ const data = snap.exists() ? snap.data() : {};
             {isPro&&<button className="btn" onClick={handleManageSubscription} disabled={portalLoading} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#555",background:"none",borderRadius:8,display:"flex",alignItems:"center",gap:8}}>{portalLoading?"Loading…":"⚙️ Manage Subscription"}</button>}
             {isGuest
               ? <button className="btn" onClick={()=>{setShowP(false);onGoAuth();}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#555",background:"none",borderRadius:8}}>📧 Sign Up / Sign In</button>
-              : <><a href="https://wa.me/14168549304" target="_blank" rel="noreferrer" style={{display:"block",width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#25D366",background:"none",borderRadius:8,textDecoration:"none"}}>💬 Support</a><button className="btn" onClick={onSignOut} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#888",background:"none",borderRadius:8}}>🚪 Sign Out</button><div style={{height:1,background:"#F0EFEC",margin:"6px 4px"}}/><button className="btn" onClick={()=>{setShowP(false);setShowDeleteConfirm(true);}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#DC2626",background:"none",borderRadius:8}}>🗑️ Delete Account</button></>}
+              : <><a href="https://wa.me/14168549304" onClick={e=>{e.preventDefault();openExternal("https://wa.me/14168549304");}} rel="noreferrer" style={{display:"block",width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#25D366",background:"none",borderRadius:8,textDecoration:"none"}}>💬 Support</a><button className="btn" onClick={onSignOut} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#888",background:"none",borderRadius:8}}>🚪 Sign Out</button><div style={{height:1,background:"#F0EFEC",margin:"6px 4px"}}/><button className="btn" onClick={()=>{setShowP(false);setShowDeleteConfirm(true);}} style={{width:"100%",padding:"11px 14px",textAlign:"left",fontSize:13,fontWeight:600,color:"#DC2626",background:"none",borderRadius:8}}>🗑️ Delete Account</button></>}
           </div>
         </>
       )}
